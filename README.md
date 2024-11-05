@@ -5,6 +5,16 @@ A C++ library for solving Hamilton-Jacobi-Bellman equations in 2D, with specific
 ## Project Structure
 
 ```
+CASLHJB2D/                  # Root directory
+├── CASLCommonLibrary/      # Core library code ✓
+├── CASLProjects/          # Individual projects ✓
+├── CMakeLists.txt         # Main CMake file ✓
+├── README.md              # Documentation ✓
+├── LICENSE                # License file ✓
+├── .gitignore            # Git ignore file ✓
+├── cmake-build-debug/     # Build directory (will be ignored) ✓
+└── cmake-build-release/   # Build directory (will be ignored) ✓
+
 CASLHJB2D/
 ├── CMakeLists.txt
 ├── CASLCommonLibrary/
