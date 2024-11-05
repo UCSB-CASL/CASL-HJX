@@ -2,39 +2,35 @@
 
 A C++ library for solving Hamilton-Jacobi-Bellman equations in 2D, with specific applications for Linear Quadratic Regulator (LQR) and other control problems.
 
-## Project Structure
+Here's the edited and merged version for your README.md:
 
+```markdown
+## Project Structure
 ```
 CASLHJB2D/                  # Root directory
-├── CASLCommonLibrary/      # Core library code ✓
-├── CASLProjects/          # Individual projects ✓
-├── CMakeLists.txt         # Main CMake file ✓
-├── README.md              # Documentation ✓
-├── LICENSE                # License file ✓
-├── .gitignore            # Git ignore file ✓
-├── cmake-build-debug/     # Build directory (will be ignored) ✓
-└── cmake-build-release/   # Build directory (will be ignored) ✓
-
-CASLHJB2D/
-├── CMakeLists.txt
-├── CASLCommonLibrary/
-│   ├── CASLArray2D.cpp
-│   ├── CaslGrid2D.h
-│   ├── CaslOptions.h
-│   ├── CASLCppToMatlab2D.cpp
-│   ├── CASLHamiltonian2D.cpp
-│   ├── CASLHamiltonJacobi.cpp
-│   └── CASLHamiltonJacobi2D.cpp
-└── CASLProjects/
-    ├── projectLQR2D/
-    │   ├── CMakeLists.txt
-    │   ├── main.cpp
-    │   └── projectLQR2D_lib/
+├── CMakeLists.txt         # Main CMake file
+├── CASLCommonLibrary/     # Core library code
+│   ├── CASLArray2D.cpp           # 2D array implementation
+│   ├── CaslGrid2D.h              # Grid management
+│   ├── CaslOptions.h             # Configuration options
+│   ├── CASLCppToMatlab2D.cpp     # MATLAB export utilities
+│   ├── CASLHamiltonian2D.cpp     # 2D Hamiltonian solver
+│   ├── CASLHamiltonJacobi.cpp    # Hamilton-Jacobi solver
+│   └── CASLHamiltonJacobi2D.cpp  # 2D HJB implementation
+└── CASLProjects/          # Individual projects
+    ├── projectLQR2D/             # Linear Quadratic Regulator
+    │   ├── CMakeLists.txt        # Project-specific CMake
+    │   ├── main.cpp              # Main implementation
+    │   └── projectLQR2D_lib/     # LQR specific library
     │       ├── CaslLQRSystemDynamics.h
     │       └── CaslHamiltonianLQR2D.h
-    ├── projectLaplacian2D_1D/
-    ├── projectStochasticHH2D/
-    └── projectDeterministicHH2D/
+    ├── projectLaplacian2D_1D/    # 2D to 1D Laplacian solver
+    ├── projectStochasticHH2D/    # Stochastic HJB (planned)
+    └── projectDeterministicHH2D/ # Deterministic HJB (planned)
+
+# Build artifacts (ignored by git)
+├── cmake-build-debug/     # Debug build directory
+└── cmake-build-release/   # Release build directory
 ```
 
 ## Prerequisites
