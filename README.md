@@ -4,9 +4,8 @@ A C++ library for solving Hamilton-Jacobi-Bellman equations in 2D, with specific
 
 Here's the edited and merged version for your README.md:
 
-```markdown
 ## Project Structure
-```
+
 CASLHJB2D/                  # Root directory
 ├── CMakeLists.txt         # Main CMake file
 ├── CASLCommonLibrary/     # Core library code
