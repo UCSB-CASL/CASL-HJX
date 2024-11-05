@@ -6,7 +6,7 @@ Here's the edited and merged version for your README.md:
 
 ## Project Structure
 
-CASLHJB2D/                  # Root directory
+CASLHJB2D/                  
 ├── CMakeLists.txt         # Main CMake file
 ├── CASLCommonLibrary/     # Core library code
 │   ├── CASLArray2D.cpp           # 2D array implementation
@@ -28,6 +28,7 @@ CASLHJB2D/                  # Root directory
     └── projectDeterministicHH2D/ # Deterministic HJB (planned)
 
 # Build artifacts (ignored by git)
+
 ├── cmake-build-debug/     # Debug build directory
 └── cmake-build-release/   # Release build directory
 ```
