@@ -23,17 +23,60 @@ CASLHJB2D/
 │   ├── CASLCppToMatlab2D.cpp     # MATLAB export utilities
 │   ├── CASLHamiltonian2D.cpp     # 2D Hamiltonian solver
 │   ├── CASLHamiltonJacobi.cpp    # Hamilton-Jacobi solver
-│   └── CASLHamiltonJacobi2D.cpp  # 2D HJB implementation
+│   ├── CASLHamiltonJacobi2D.cpp  # 2D HJB implementation
+│   ├── CASLRK4.cpp               # Runge-Kutta 4th order implementation
+│   └── CASLSecondOrderDerivative2D_1D.cpp  # Second order derivative calculator
 └── CASLProjects/           # Project implementations
     ├── projectLQR2D/       # Linear Quadratic Regulator
     │   ├── CMakeLists.txt
     │   ├── main.cpp
+    │   ├── __Output/              # Generated output directory
+    │   │   ├── LQR2D_32/         # Results for 32x32 grid
+    │   │   │   └── phi/          # Value function results
+    │   │   ├── LQR2D_64/         # Results for 64x64 grid
+    │   │   │   └── phi/          # Value function results
+    │   │   └── LQR2D_128/        # Results for 128x128 grid
+    │   │       └── phi/          # Value function results
     │   └── projectLQR2D_lib/
-    │       ├── CaslLQRSystemDynamics.h
-    │       └── CaslHamiltonianLQR2D.h
+    │       ├── CaslHamiltonianLQR2D.cpp    
+    │       ├── CaslHamiltonianLQR2D.h
+    │       ├── CaslLQRSystemDynamics.cpp   
+    │       └── CaslLQRSystemDynamics.h
     ├── projectLaplacian2D_1D/     # 2D to 1D Laplacian solver
-    ├── projectStochasticHH2D/     # Stochastic HJB (planned)
-    └── projectDeterministicHH2D/  # Deterministic HJB (planned)
+    │   ├── CMakeLists.txt
+    │   ├── main.cpp
+    │   ├── __Output/              # Generated output directory
+    │   │   ├── phi/              # Solution profiles
+    │   │   └── uStar/            # Control profiles
+    │   └── projectLaplacian2D_1D_lib/
+    │       ├── CaslHamiltonianDiffusion2D.cpp
+    │       ├── CaslHamiltonianDiffusion2D.h
+    │       ├── CaslInitialProfiles2D.cpp    
+    │       └── CaslInitialProfiles2D.h
+    ├── projectStochasticHH2D/     # Stochastic Hodgkin-Huxley Model
+    │   ├── CMakeLists.txt
+    │   ├── main.cpp
+    │   ├── __Output/              # Generated output directory
+    │   │   ├── phi/              # Value function results
+    │   │   └── uStar/            # Optimal control results
+    │   └── projectStochasticHH2D_lib/
+    │       ├── CaslHHNeuronModel.cpp       
+    │       ├── CaslHHNeuronModel.h
+    │       ├── CaslHamiltonianHHModel.cpp  
+    │       └── CaslHamiltonianHHModel.h
+    └── projectDeterministicHH2D/  # Deterministic Hodgkin-Huxley Model
+        ├── CMakeLists.txt
+        ├── main.cpp
+        ├── __Output/              # Generated output directory
+        │   ├── phi/              # Value function results
+        │   └── uStar/            # Optimal control results
+        └── projectDeterministicHH2D_lib/
+            ├── CaslHHSingleNeuronModel.cpp 
+            ├── CaslHHSingleNeuronModel.h
+            ├── CaslHHWholeSystemModel.cpp  
+            ├── CaslHHWholeSystemModel.h
+            ├── CaslHamiltonianHHModel.cpp  
+            └── CaslHamiltonianHHModel.h
 ```
 
 ## Prerequisites
