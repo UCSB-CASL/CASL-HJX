@@ -11,7 +11,7 @@
  *   dv/dt + H(z, t, v, ∇v) + (D)d²v/dx² = 0
  *
  * Numerical Solution Procedure:
- * 1. Calculate ∇v using ENO method
+ * 1. Calculate ∇v using WENO method
  * 2. Compute H_hat using LLF method with quadratic extrapolation BC
  * 3. Discretize the diffusion term using backward time central differencing with quadratic extrapolation BC
  * 4. Integrate v(z, t) using TVD RK method
@@ -63,16 +63,16 @@
 using namespace std;
 namespace fs = std::filesystem;
 
-double calculateIC   (double x, double y, double gama, double xTarget, double yTarget, double sigma     );
-double minCalculator (const CaslGrid2D& grid, const CaslArray2D<double>& un                             );
-double maxCalculator (const CaslGrid2D& grid, const CaslArray2D<double>& un                             );
-double heatSourceFunction(CaslGrid2D & grid, int i, int j, double time, int dimension);
-void   exportToMatlab(const CaslGrid2D& grid, const CaslArray2D<double>& un, const std::string& fileName);
-void   save2DTRUE2D  (const CaslGrid2D& grid, const CaslArray2D<double>& phi                            );
-void   findMinMax    (CaslArray2D<double> f, double & minVal, double & maxVal, int & iMin, int & jMin   );
+double heatSourceFunction                (CaslGrid2D & grid, int i, int j, double time, int dimension);
+double calculateIC                       (double x, double y, double gama, double xTarget, double yTarget, double sigma     );
+double minCalculator                     (const CaslGrid2D& grid, const CaslArray2D<double>& un                             );
+double maxCalculator                     (const CaslGrid2D& grid, const CaslArray2D<double>& un                             );
+void   exportToMatlab                    (const CaslGrid2D& grid, const CaslArray2D<double>& un, const std::string& fileName);
+void   save2DTRUE2D                      (const CaslGrid2D& grid, const CaslArray2D<double>& phi                            );
+void   findMinMax                        (CaslArray2D<double> f, double & minVal, double & maxVal, int & iMin, int & jMin   );
+void   ensureDirectoryExists             (const std::string& directoryPath);
 CaslArray2D<double> computeOptimalControl(const CaslArray2D<double> & phi_x, CaslGrid2D grid, double uMax, double K);
-CaslArray2D<double> computePhi_x(CaslArray2D<double> & phi_n, CaslGrid2D grid, CaslOptionPaddingWith BC, int derivativeDirection);
-void ensureDirectoryExists(const std::string& directoryPath);
+CaslArray2D<double> computePhi_x         (CaslArray2D<double> & phi_n, CaslGrid2D grid, CaslOptionPaddingWith BC, int derivativeDirection);
 
 int main() {
 
