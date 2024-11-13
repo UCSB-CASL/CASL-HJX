@@ -46,31 +46,51 @@
 #include <iostream>
 #include <fstream>
 #include <array>
+#include <filesystem>
+#include <chrono>
 
 #include "CaslGrid2D.h"
 #include "CaslArray2D.h"
 #include "CaslHamiltonJacobi2D.h"
-#include "CaslHHWholeSystemModel.h"
-#include "CaslHamiltonianHHModel.h"
+#include "projectDeterministicHH2D_lib/CaslHHWholeSystemModel.h"
+#include "projectDeterministicHH2D_lib/CaslHamiltonianHHModel.h"
 
 using namespace std;
+namespace fs = std::filesystem;
 
-double calculateIC(double x, double y, double gama, double xTarg, double yTarg, double sigma);
-void exportToMatlab(const CaslGrid2D& grid, const CaslArray2D<double>& un, const std::string& fileName );
-double minCalculator(const CaslGrid2D& grid, const CaslArray2D<double>& un);
-double maxCalculator(const CaslGrid2D& grid, const CaslArray2D<double>& un);
-void save2DTRUE2D(const CaslGrid2D & grid, const CaslArray2D<double> & phi);
+double  calculateIC          (double x, double y, double gama, double xTarg, double yTarg, double sigma);
+double  minCalculator        (const CaslGrid2D& grid, const CaslArray2D<double>& un);
+double  maxCalculator        (const CaslGrid2D& grid, const CaslArray2D<double>& un);
+void    save2DTRUE2D         (const CaslGrid2D& grid, const CaslArray2D<double> & phi);
+void    exportToMatlab       (const CaslGrid2D& grid, const CaslArray2D<double>& un, const std::string& fileName );
+void    ensureDirectoryExists(const std::string& directoryPath);
 
 int main() {
-    string testFolderName = "HH2DResultsFor4DTest";
+
+    auto start_time = chrono::high_resolution_clock::now();
+
+    // Project Structure:
+    // Set Directories
+    //    CASLHJB2D/
+    //    └── CASLProjects/
+    //      └── projectStochastic2D/
+    //          └── __Output/
+    //              ├── phi/
+    //              ├── uStar/
+    string projectPath = fs::current_path().string() + "/";  // Gets current working directory
+    string outputFolder = projectPath + "__Output/";
+    string phiFolder = outputFolder + "phi/";
+    string uStarFolder = outputFolder + "uStar/";
+
+    ensureDirectoryExists(outputFolder);
+    ensureDirectoryExists(phiFolder);
+    ensureDirectoryExists(uStarFolder);
 
     // Pre-defined Constants:
     const int scaleFac = Ks;        // scale factor
     const double uMax = Ib;         // maximum current
     const double vSpike = 44.8;     // mV 44.2
     const double nSpike = 0.459;    // 0.465
-    const double vTh = -20.0;         // Threshold mean voltage that triggers input
-    const double tTh = 0;           // Threshold time that activates input
 
     // Grid Set up:
     const double vMin = -100, vMax = 100;
@@ -199,9 +219,6 @@ int main() {
     int i = 0;
     int stepCounter = 1;                // To count total steps
     std::vector<CaslArray2D<double>> uStarData;
-    string folderName = "../__Output/" + testFolderName + "/";
-    string phiFolderName = folderName + "phiResults" + "/";
-    string uStarFolderName = folderName + "uStarResults" + "/";
 
     vector<double> phiMinData;
     phiMinData.push_back(phi_n(iMin, jMin));
@@ -218,8 +235,8 @@ int main() {
         if (currentTime + dt <= tFinal) {
             if (exportCounter % 120 == 0) {
                 cout << "Export to Matlab at currentTime = " << currentTime << endl;
-                std::string phi_fileName = phiFolderName + "phi_" + std::to_string(i) + ".dat";
-                std::string uStar_fileName = uStarFolderName+ "uStar_" + std::to_string(i) + ".dat";
+                std::string phi_fileName = phiFolder + "phi_" + std::to_string(i) + ".dat";
+                std::string uStar_fileName = uStarFolder + "uStar_" + std::to_string(i) + ".dat";
 
                 exportToMatlab(grid, phi_n, phi_fileName);
                 exportToMatlab(grid, uStar, uStar_fileName);
@@ -239,8 +256,8 @@ int main() {
             dt = tFinal - currentTime;
             currentTime = tFinal;
             cout << "Export to Matlab at currentTime = " << currentTime << endl;
-            std::string phi_fileName = phiFolderName + "phi_" + std::to_string(i) + ".dat";
-            std::string uStar_fileName = uStarFolderName+ "uStar_" + std::to_string(i) + ".dat";
+            std::string phi_fileName = phiFolder + "phi_" + std::to_string(i) + ".dat";
+            std::string uStar_fileName = uStarFolder + "uStar_" + std::to_string(i) + ".dat";
 
             exportToMatlab(grid, phi_n, phi_fileName);
             exportToMatlab(grid, uStar, uStar_fileName);
@@ -276,14 +293,18 @@ int main() {
         exportCounter++;
     }
 
-    ofstream phiOnMinFile("HH2DphiOfMin_Upwind.dat");
+    // ofstream phiOnMinFile("HH2DphiOfMin_Upwind.dat");
     // ofstream phiOnMinFile("HH2DphiOfMin_WENO5.dat");
     // ofstream phiOnMinFile("HH2DphiOfMin_ENO3.dat");
-    for (int inx = 1; inx <= size(phiMinData); inx++) {
-        phiOnMinFile << phiMinData[inx] << "\n";
-    }
-    phiOnMinFile.close();
-    save2DTRUE2D(grid, phi_n);
+    // for (int inx = 1; inx <= size(phiMinData); inx++) {
+    //    phiOnMinFile << phiMinData[inx] << "\n";
+    // }
+    // phiOnMinFile.close();
+    // save2DTRUE2D(grid, phi_n);
+    auto end_time = std::chrono::high_resolution_clock::now();
+    auto sim_tim = std::chrono::duration_cast<std::chrono::minutes>(end_time - start_time);
+
+    std::cout << "Time for the whole simulation: "  << setprecision(4) << sim_tim.count() << " minutes" << std::endl;
 }
 
 void save2DTRUE2D(const CaslGrid2D & grid, const CaslArray2D<double> & phi) {
@@ -348,4 +369,19 @@ double maxCalculator(const CaslGrid2D& grid, const CaslArray2D<double>& un) {
         }
     }
     return maxVal;
+}
+
+void ensureDirectoryExists(const std::string& directoryPath) {
+    try {
+        if (fs::exists(directoryPath)) {
+            std::cout << "Directory already exists: " << directoryPath << std::endl;
+            return;
+        }
+
+        fs::create_directories(directoryPath);
+        std::cout << "Directory created: " << directoryPath << std::endl;
+
+    } catch (const std::exception& e) {
+        std::cerr << "Error with directory: " << directoryPath << ". " << e.what() << std::endl;
+    }
 }
