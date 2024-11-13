@@ -68,6 +68,7 @@ target_include_directories(CASLCommonLibrary
 )
 
 # Add the projects
+add_subdirectory(CASLProjects/projectDeterministicHH2D)
 add_subdirectory(CASLProjects/projectStochasticHH2D)
 add_subdirectory(CASLProjects/projectLQR2D)
 add_subdirectory(CASLProjects/projectLaplacian2D_1D)
