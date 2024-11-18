@@ -247,14 +247,14 @@ void CaslSecondOrderDerivative2D<T>::backwardTimeCentralSpacing(CaslArray2D<doub
                 DPMatrix2D<double> LaplacianSolver(nX, nY);
                 LaplacianSolver.constantBoundary(beta, -alpha_x, -alpha_y);
 
-                LaplacianSolver.conjGrad(unp1, RHS, 1e-9, 1000);
+                LaplacianSolver.conjGrad(unp1, RHS, tolerance, iterations);
             }
 
             if (_boundaryCondition == withLinearExtrapolation){
                 DPMatrix2D<double> LaplacianSolver(nX, nY);
                 LaplacianSolver.linearBoundary(beta, -alpha_x, -alpha_y);
 
-                LaplacianSolver.conjGrad(unp1, RHS, 1e-9, 1000);
+                LaplacianSolver.conjGrad(unp1, RHS, tolerance, iterations);
             }
 
             if (_boundaryCondition == withPeriodicCondition) {
@@ -262,7 +262,7 @@ void CaslSecondOrderDerivative2D<T>::backwardTimeCentralSpacing(CaslArray2D<doub
 //                DPMatrixPeriodic2D<double> LaplacianSolver(nX, nY);
 //                LaplacianSolver.periodicBoundary(beta, -alpha_x, -alpha_y);
 //
-//                LaplacianSolver.conjGrad(unp1, RHS, 1e-9, 1000);
+//                LaplacianSolver.conjGrad(unp1, RHS, tolerance, iterations);
 
                 std::cerr << "In CaslSecondOrderDerivative2D::backwardTimeCentralSpacing, Invalid heat equation dimension for withPeriodicCondition! EXITING." << std::endl;
                 exit(1);
@@ -456,14 +456,14 @@ void CaslSecondOrderDerivative2D<T>::crankNicolson(const CaslArray2D<double>& un
                 DPMatrix<double> LaplacianSolver(nX, nY);
                 LaplacianSolver.constantBoundary(beta, -alpha_x, -alpha_y);
 
-                LaplacianSolver.conjGrad(unp1, RHS, 1e-9, 1000);
+                LaplacianSolver.conjGrad(unp1, RHS, tolerance, iterations);
             }
 
             if (_boundaryCondition == withLinearExtrapolation){
                 DPMatrix<double> LaplacianSolver(nX, nY);
                 LaplacianSolver.linearBoundary(beta, -alpha_x, -alpha_y);
 
-                LaplacianSolver.conjGrad(unp1, RHS, 1e-9, 1000);
+                LaplacianSolver.conjGrad(unp1, RHS, tolerance, iterations);
             }
 
             if (_boundaryCondition == withPeriodicCondition) {
