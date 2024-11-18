@@ -105,7 +105,7 @@ void CaslSecondOrderDerivative2D<T>::forwardTimeCentralSpacingWithMixedDerivs(co
 }
 
 template<class T>
-void CaslSecondOrderDerivative2D<T>::backwardTimeCentralSpacing(CaslArray2D<double>& un, CaslArray2D<double>& unp1) {
+void CaslSecondOrderDerivative2D<T>::backwardTimeCentralSpacing(CaslArray2D<double>& un, CaslArray2D<double>& unp1, T tolerance, int iterations) {
 
     int nX = _grid.nX(), nY = _grid.nY();
 
@@ -216,6 +216,63 @@ void CaslSecondOrderDerivative2D<T>::backwardTimeCentralSpacing(CaslArray2D<doub
         }
 
         case 12: { // 2D Diffusion term
+            CaslArray2D<double> RHS(nX, nY);
+            un.fillPaddingPoints(_boundaryCondition);
+            CaslArray2D<T> numericalHamiltonian = _HJSolver.computeNumericalHamiltonian(un);
+
+            // Compute the right-hand side (RHS)
+            for (int i = 1; i <= nX; i++) {
+                for (int j = 1; j <= nY; j++) {
+                    // For test cases that there is inhomogeneous BC at x = L(i = nX) || x = 0(i = 1):
+                    // Change the whole RHS(i, j) with the function formula
+                    RHS(i, j) = un(i, j);
+
+                    // Add numerical hamiltonian
+                    // Compute the numerical Hamiltonian at time step: n, solving explicitly
+                    RHS(i, j) -= _dt * numericalHamiltonian(i, j);
+
+                    // Compute the heat source term at time step: n
+                    auto sourceTerm_ij = _inhomogeneousTermFunction(_grid, i, j, _time, dimension);
+                    RHS(i, j) += _dt * sourceTerm_ij;
+                }
+            }
+
+            double dx    = _grid.dx();
+            double dy    = _grid.dy();
+            double alpha_x = _diffusionCoefficient * ( _dt / (dx * dx));
+            double alpha_y = _diffusionCoefficient * ( _dt / (dy * dy));
+            double beta  = 1.0 + 2.0 * (alpha_x + alpha_y);
+
+            if (_boundaryCondition == withConstantExtrapolation) {
+                DPMatrix2D<double> LaplacianSolver(nX, nY);
+                LaplacianSolver.constantBoundary(beta, -alpha_x, -alpha_y);
+
+                LaplacianSolver.conjGrad(unp1, RHS, 1e-9, 1000);
+            }
+
+            if (_boundaryCondition == withLinearExtrapolation){
+                DPMatrix2D<double> LaplacianSolver(nX, nY);
+                LaplacianSolver.linearBoundary(beta, -alpha_x, -alpha_y);
+
+                LaplacianSolver.conjGrad(unp1, RHS, 1e-9, 1000);
+            }
+
+            if (_boundaryCondition == withPeriodicCondition) {
+                // TODO: implement ILU with less sparse structure (condition number too high)
+//                DPMatrixPeriodic2D<double> LaplacianSolver(nX, nY);
+//                LaplacianSolver.periodicBoundary(beta, -alpha_x, -alpha_y);
+//
+//                LaplacianSolver.conjGrad(unp1, RHS, 1e-9, 1000);
+
+                std::cerr << "In CaslSecondOrderDerivative2D::backwardTimeCentralSpacing, Invalid heat equation dimension for withPeriodicCondition! EXITING." << std::endl;
+                exit(1);
+            }
+
+            if (_boundaryCondition == withQuadraticExtrapolation) {
+                // TODO: less sparse structure for non-adjacent cells
+                std::cerr << "In CaslSecondOrderDerivative2D::backwardTimeCentralSpacing, Invalid heat equation dimension for withQuadraticExtrapolation! EXITING." << std::endl;
+                exit(1);
+            }
 
             break;
         }
@@ -227,8 +284,212 @@ void CaslSecondOrderDerivative2D<T>::backwardTimeCentralSpacing(CaslArray2D<doub
 }
 
 template<class T>
-void CaslSecondOrderDerivative2D<T>::crankNicolson(const CaslArray2D<double>& un, CaslArray2D<double>& unp1){
+void CaslSecondOrderDerivative2D<T>::crankNicolson(const CaslArray2D<double>& un, CaslArray2D<double>& unp1, T tolerance, int iterations){
+    int nX = _grid.nX(), nY = _grid.nY();
 
+    // Check on direction of diffusion term
+    int dimension;
+    heatEquationDimension(dimension);
+
+    switch (dimension) {
+        case 1: {  // Diffusion term: u_xx
+            CaslArray2D<double> DxxExplicit(nX, nX), Dxx(nX, nX), RHS(nX, nY);
+            un.fillPaddingPoints(_boundaryCondition);
+            CaslArray2D<T> numericalHamiltonian = _HJSolver.computeNumericalHamiltonian(un);
+
+
+            // Halve diffusion coefficient temporarily for crank-nicolson
+            _diffusionCoefficient = 0.5 * _diffusionCoefficient;
+
+            // Compute explicit u_xx term
+            computeDxxForwardTimeCentralSpacing(un, DxxExplicit);
+
+            // Compute the coefficient matrix (Dxx)
+            computeDxx(un, Dxx);
+
+            // Compute the right-hand side (RHS)
+            for (int i = 1; i <= nX; i++) {
+                for (int j = 1; j <= nY; j++) {
+                    // For test cases that there is inhomogeneous BC at x = L(i = nX) || x = 0(i = 1):
+                    // Change the whole RHS(i, j) with the function formula
+                    RHS(i, j) = un(i, j);
+                    // Add numerical hamiltonian
+                    // Compute the numerical Hamiltonian at time step: n, solving explicitly
+                    RHS(i, j) -= _dt * numericalHamiltonian(i, j);
+
+                    // Compute the heat source term at time step: n
+                    auto sourceTerm_ij = _inhomogeneousTermFunction(_grid, i, j, _time, dimension);
+                    RHS(i, j) += _dt * sourceTerm_ij;
+
+                    // Add explicit u_xx term
+                    RHS(i, j) += _diffusionCoefficient * _dt * DxxExplicit(i, j);
+                }
+            }
+
+            // Return diffusion coefficient to normal
+            _diffusionCoefficient += _diffusionCoefficient;
+
+            // For the following BCs, the coefficient matrix will be tri-diagonal which is solvable using triDiagonal solvers
+            if (_boundaryCondition == withLinearExtrapolation || _boundaryCondition == withConstantExtrapolation) {
+                // symmetric tri-diagonal matrix on LHS * unp1
+                triDiagonalMatrixSolver(Dxx, RHS, unp1);
+            }
+
+            if (_boundaryCondition == withPeriodicCondition) {
+                // non-tri-diagonal matrix
+                if (_diffusionCoefficient != 0.0) {
+                    for (int j = 1; j<= RHS.nY(); j++) {
+                        RHS(1, j) = 0.0;
+                        RHS(nX, j) = 0.0;
+                    }
+                }
+
+                invertMatrixAndMultiply(Dxx, RHS, unp1);
+            }
+
+            if (_boundaryCondition == withQuadraticExtrapolation)
+            {
+                // non-tri-diagonal matrix
+                invertMatrixAndMultiply(Dxx, RHS, unp1);
+            }
+
+            break;
+        }
+
+        case 2: {  // Diffusion term: u_yy
+            CaslArray2D<double> DyyExplicit(nY, nY), Dyy(nY, nY), RHS(nX, nY);
+            un.fillPaddingPoints(_boundaryCondition);
+            CaslArray2D<T> numericalHamiltonian = _HJSolver.computeNumericalHamiltonian(un);
+
+            // Halve diffusion coefficient temporarily for crank-nicolson
+            _diffusionCoefficient = 0.5 * _diffusionCoefficient;
+
+            // Compute explicit u_xx term
+            computeDyyForwardTimeCentralSpacing(un, DyyExplicit);
+
+            // Compute the coefficient matrix (Dyy)
+            computeDyy(un, Dyy);
+
+            // Compute the right-hand side (RHS)
+            for (int i = 1; i <= nX; i++) {
+                for (int j = 1; j <= nY; j++) {
+                    // For test cases that there is inhomogeneous BC at x = L(i = nX) || x = 0(i = 1):
+                    // Change the whole RHS(i, j) with the function formula
+                    RHS(i, j) = un(i, j);
+
+                    // Add numerical hamiltonian
+                    // Compute the numerical Hamiltonian at time step: n, solving explicitly
+                    RHS(i, j) -= _dt * numericalHamiltonian(i, j);
+
+                    // Compute the heat source term at time step: n
+                    auto sourceTerm_ij = _inhomogeneousTermFunction(_grid, i, j, _time, dimension);
+                    RHS(i, j) += _dt * sourceTerm_ij;
+
+                    // Add explicit u_yy term
+                    RHS(i, j) += _dt * _diffusionCoefficient * DyyExplicit(i, j);
+                }
+            }
+
+            // Revert diffusion coefficient
+            _diffusionCoefficient += _diffusionCoefficient;
+
+            // For the following BCs, the coefficient matrix will be tri-diagonal which is solvable using triDiagonal solvers
+            if (_boundaryCondition == withLinearExtrapolation || _boundaryCondition == withConstantExtrapolation) {
+                // symmetric tri-diagonal matrix on LHS * unp1
+                triDiagonalMatrixSolver(Dyy, RHS, unp1);
+            }
+
+            if (_boundaryCondition == withPeriodicCondition) {
+                // non-tri-diagonal matrix
+                if (_diffusionCoefficient != 0.0) {
+                    for (int j = 1; j<= RHS.nY(); j++) {
+                        RHS(1, j) = 0.0;
+                        RHS(nX, j) = 0.0;
+                    }
+                }
+                invertMatrixAndMultiply(Dyy, RHS, unp1);
+            }
+
+            if (_boundaryCondition == withQuadraticExtrapolation) {
+                // non-tri-diagonal matrix
+                invertMatrixAndMultiply(Dyy, RHS, unp1);
+            }
+
+            break;
+        }
+
+        case 12: { // 2D Diffusion term
+            CaslArray2D<double> RHS(nX, nY), Dxx(nX, nY), Dyy(nX, nY);
+            un.fillPaddingPoints(_boundaryCondition);
+            CaslArray2D<T> numericalHamiltonian = _HJSolver.computeNumericalHamiltonian(un);
+
+            computeDxxForwardTimeCentralSpacing(un, Dxx);
+            computeDyyForwardTimeCentralSpacing(un, Dyy);
+
+            // Compute the right-hand side (RHS)
+            for (int i = 1; i <= nX; i++) {
+                for (int j = 1; j <= nY; j++) {
+                    // For test cases that there is inhomogeneous BC at x = L(i = nX) || x = 0(i = 1):
+                    // Change the whole RHS(i, j) with the function formula
+                    RHS(i, j) = un(i, j);
+
+                    // Add numerical hamiltonian
+                    // Compute the numerical Hamiltonian at time step: n, solving explicitly
+                    RHS(i, j) -= _dt * numericalHamiltonian(i, j);
+
+                    // Compute the heat source term at time step: n
+                    auto sourceTerm_ij = _inhomogeneousTermFunction(_grid, i, j, _time, dimension);
+                    RHS(i, j) += _dt * sourceTerm_ij;
+
+                    // Add explicit term
+                    RHS(i, j) += _dt * 0.5 * _diffusionCoefficient * (Dxx(i, j) + Dyy(i, j));
+                }
+            }
+
+            double dx    = _grid.dx();
+            double dy    = _grid.dy();
+            double alpha_x = 0.5 * _diffusionCoefficient * ( _dt / (dx * dx));
+            double alpha_y = 0.5 * _diffusionCoefficient * ( _dt / (dy * dy));
+            double beta  = 1.0 + 2.0 * (alpha_x + alpha_y);
+
+            if (_boundaryCondition == withConstantExtrapolation) {
+                DPMatrix<double> LaplacianSolver(nX, nY);
+                LaplacianSolver.constantBoundary(beta, -alpha_x, -alpha_y);
+
+                LaplacianSolver.conjGrad(unp1, RHS, 1e-9, 1000);
+            }
+
+            if (_boundaryCondition == withLinearExtrapolation){
+                DPMatrix<double> LaplacianSolver(nX, nY);
+                LaplacianSolver.linearBoundary(beta, -alpha_x, -alpha_y);
+
+                LaplacianSolver.conjGrad(unp1, RHS, 1e-9, 1000);
+            }
+
+            if (_boundaryCondition == withPeriodicCondition) {
+                // TODO: implement ILU with less sparse structure (condition number too high)
+//                DPMatrixPeriodic2D<double> LaplacianSolver(nX, nY);
+//                LaplacianSolver.periodicBoundary(beta, -alpha_x, -alpha_y);
+//
+//                LaplacianSolver.conjGrad(unp1, RHS, 1e-9, 1000);
+
+                std::cerr << "In CaslSecondOrderDerivative2D::backwardTimeCentralSpacing, Invalid heat equation dimension for withPeriodicCondition! EXITING." << std::endl;
+                exit(1);
+            }
+
+            if (_boundaryCondition == withQuadraticExtrapolation) {
+                // TODO: less sparse structure for non-adjacent cells
+                std::cerr << "In CaslSecondOrderDerivative2D::backwardTimeCentralSpacing, Invalid heat equation dimension for withQuadraticExtrapolation! EXITING." << std::endl;
+                exit(1);
+            }
+
+            break;
+        }
+
+        default:
+            std::cerr << "In CaslSecondOrderDerivative2D::backwardTimeCentralSpacing, Invalid dimension for the heat equation! EXITING." << std::endl;
+            exit(1);
+    }
 }
 
 template<class T>

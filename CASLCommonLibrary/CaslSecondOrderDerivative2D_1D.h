@@ -43,6 +43,7 @@
 #include "CaslGrid2D.h"
 #include "CaslHamiltonian2D.h"
 #include "CaslHamiltonJacobi2D.h"
+#include "DPMatrix2D.h"
 
 template <class T> class CaslSecondOrderDerivative2D {
 private:
@@ -78,8 +79,8 @@ public:
     double findCFLHamiltonianDiffusion           (const CaslArray2D<double>& un, double time);               // dt based on the CFL Condition for advection-diffusion tyoe equatiosn
     void forwardTimeCentralSpacing               (const CaslArray2D<double>& un, CaslArray2D<double>& unp1); // FTCS
     void forwardTimeCentralSpacingWithMixedDerivs(const CaslArray2D<double>& un, CaslArray2D<double>& unp1); // FTCS with mixed derivatives
-    void backwardTimeCentralSpacing              (CaslArray2D<double> &un, CaslArray2D<double> &unp1);       // BTCS
-    void crankNicolson                           (const CaslArray2D<double> &un, CaslArray2D<double> &unp1); // Crank Nicolson (average of FTCS and BTCS)
+    void backwardTimeCentralSpacing              (CaslArray2D<double> &un, CaslArray2D<double> &unp1, T tolerance=1e-9, int iterations=5000);       // BTCS
+    void crankNicolson                           (const CaslArray2D<double> &un, CaslArray2D<double> &unp1, T tolerance=1e-9, int iterations=5000); // Crank Nicolson (average of FTCS and BTCS)
 
 private:
     void heatEquationDimension               (int & dimension);
