@@ -3,6 +3,9 @@
 
 #include <vector>
 #include "../../CASLUniformLibrary/Arrays/CaslArray2D.h"
+#include <cmath>
+#include <complex>
+
 
 using namespace std;
 
@@ -19,8 +22,17 @@ protected:
 
     /// Returns dot product between vectors u and v
     T dot(const CaslArray2D<T>& u, const CaslArray2D<T>& v);
-
+    // Returns dfft
+private:
 public:
+    vector<complex<T>> fftPadded(const vector<complex<T>>& x, bool inverse=false);
+    vector<vector<complex<T>>> fftPadded(const vector<vector<complex<T>>>& x, bool inverse=false);
+    vector<complex<T>> fft(const vector<complex<T>>& x, bool inverse=false);
+    vector<vector<complex<T>>> fft(const vector<vector<complex<T>>>& x, bool inverse=false);
+
+    vector<vector<complex<T>>> fft2D(const CaslArray2D<T>& x);
+    CaslArray2D<T> ifft2D(const vector<vector<complex<T>>>& x);
+
     /// Instantiate DPMatrix of zeros with associated grid dimensions nX * nY
     explicit DPMatrix2D(int nX, int nY);
     /// Instantiate DPMatrix of zeros with associated square grid dimensions m * m
@@ -50,7 +62,7 @@ public:
     /// @param offX value of off diagonals associated with x-adjacent cells
     /// @param offY value of off diagonals associated with y-adjacent cells
     /// @param scale data representation divides arguments by scale for better convergence
-    void dirichletBoundary(T diag, T offX, T offY, T scale);
+    void dirichletBoundary(T diag, T offX, T offY, T scale=1);
 
     /// Fill matrix with a neumann boundary and symmetrical adjacent grid contributions
     /// @param diag value of diagonals of matrix
@@ -68,13 +80,13 @@ public:
     /// @param diag value of diagonals of matrix
     /// @param offX value of off diagonals associated with x-adjacent cells
     /// @param offY value of off diagonals associated with y-adjacent cells
-    void constantBoundary(T diag, T offX, T offY);
+    void constantBoundary(T diag, T offX, T offY, T scale=1);
 
     /// Fill matrix with a linear interpolation boundary and symmetrical adjacent grid contributions
     /// @param diag value of diagonals of matrix
     /// @param offX value of off diagonals associated with x-adjacent cells
     /// @param offY value of off diagonals associated with y-adjacent cells
-    void linearBoundary(T diag, T offX, T offY);
+    void linearBoundary(T diag, T offX, T offY, T scale=1);
 
 
     /// Apply scale factor to inner grid cells
@@ -160,9 +172,27 @@ public:
                           DPMatrix2D<T>& L, DPMatrix2D<T>& U, T tol, int niter=1000);
 };
 
+template <class T> class PeriodicSolver {
+private:
+    T center, ax, ay, tol{1e-10};
+    int nX, nY;
+public:
+    PeriodicSolver(T center, T ax, T ay, int nX, int nY):
+        center(center), ax(ax), ay(ay), nX(nX), nY(nY) {};
+    T getTolerance() const {return tol;}
+    void setTolerance(T tolerance) {tol = tolerance;}
+
+    vector<complex<T>> fftPadded(const vector<complex<T>>& x, bool inverse=false);
+    vector<vector<complex<T>>> fftPadded(const vector<vector<complex<T>>>& x, bool inverse=false);
+    vector<complex<T>> fft(const vector<complex<T>>& x, bool inverse=false);
+    vector<vector<complex<T>>> fft(const vector<vector<complex<T>>>& x, bool inverse=false);
+    vector<vector<complex<T>>> fft2D(const CaslArray2D<T>& x);
+    CaslArray2D<T> ifft2D(const vector<vector<complex<T>>>& x);
+    CaslArray2D<T> solve(const CaslArray2D<T>& x);
+};
 
 template<class T> class DPMatrixPeriodic2D: public DPMatrix2D<T>{
-private:
+protected:
     using DPMatrix2D<T>::_data, DPMatrix2D<T>::nX, DPMatrix2D<T>::nY, DPMatrix2D<T>::_n, DPMatrix2D<T>::_scale;
 public:
     using DPMatrix2D<T>::DPMatrix2D;
@@ -171,7 +201,7 @@ public:
     /// @param diag value of diagonals of matrix
     /// @param offX value of off diagonals associated with x-adjacent cells
     /// @param offY value of off diagonals associated with y-adjacent cells
-    void periodicBoundary(T diag, T offX, T offY, T scale);
+    void periodicBoundary(T diag, T offX, T offY, T scale=1);
 
     /// Left-hand side matrix multiplication with periodic
     /// @param x applies matrix to x vector
@@ -190,5 +220,30 @@ public:
     void uSolve(CaslArray2D<T>& x0, const CaslArray2D<T> &b);
 };
 
+template<typename T, class Matrix> class DPMatrixExtended2D: public Matrix {
+protected:
+    using Matrix::_data, Matrix::nX, Matrix::nY, Matrix::_n, Matrix::dot, Matrix::luSolve;
+    vector<vector<T>> _extend;          // Extends grid as [-2x +2x -2y +2y]
+    CaslArray2D<T>* preconditioner;     // Row norms of original matrix
+public:
+    DPMatrixExtended2D(int nX, int nY);
+    explicit DPMatrixExtended2D(int m) : DPMatrixExtended2D(m, m) {};
+    ~DPMatrixExtended2D() {delete preconditioner;}
+
+    /// Fill matrix with a quadratic boundary condition
+    /// @param diag value of diagonals of matrix
+    /// @param offX value of off diagonals associated with x-adjacent cells
+    /// @param offY value of off diagonals associated with y-adjacent cells
+    void quadraticBoundary(T diag, T offX, T offY);
+
+
+    // Left-hand side matrix multiplication extended a grid square
+    /// @param x applies matrix to x vector
+    /// @param Ax where to place the resulting grid (overwrites old values)
+    void matMult(CaslArray2D<T>& x, CaslArray2D<T>& Ax);
+
+    void conjGradQUAD(CaslArray2D<T>& x0, const CaslArray2D<T> &b, T tol, int niter);
+    void biconjGradQUAD(CaslArray2D<T>& x0, const CaslArray2D<T> &b, DPMatrix2D<T>& L, DPMatrix2D<T>& U, T tol, int niter);
+};
 
 #endif //CASLUNIFORM_SESOLVER_H

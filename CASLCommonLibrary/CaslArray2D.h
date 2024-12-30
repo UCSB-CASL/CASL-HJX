@@ -41,7 +41,10 @@ private:
 
 public:
 
-    explicit CaslArray2D(int nX = 1, int nY = 1, int nPadsNegX = 0, int nPadsPosX = 0, int nPadsNegY = 0, int nPadsPosY = 0);
+    explicit CaslArray2D(int nX, int nY, int nPadsNegX, int nPadsPosX, int nPadsNegY, int nPadsPosY);
+    CaslArray2D(int nX, int nY, int nPadsX, int nPadsY);
+    CaslArray2D(int nX, int nY, int nPads);
+    CaslArray2D(int nX, int nY);
     CaslArray2D(const CaslArray2D<T>& rhs);
     virtual ~CaslArray2D();
 

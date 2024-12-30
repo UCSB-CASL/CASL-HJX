@@ -22,6 +22,42 @@ template<class T> CaslArray2D<T>::CaslArray2D(int nX, int nY, const int nPadsNeg
     for (int col = 0; col < _data.size(); ++col) _data[col].resize(nY + nPadsNegY + nPadsPosY, 0);
 }
 
+template<class T> CaslArray2D<T>:: CaslArray2D(int nX, int nY, int nPadsX, int nPadsY) {
+    _nX        = nX;
+    _nY        = nY;
+    _nPadsNegX = nPadsX;
+    _nPadsPosX = nPadsX;
+    _nPadsNegY = nPadsY;
+    _nPadsPosY = nPadsY;
+    _data.resize(_nX + _nPadsNegX + _nPadsPosX);   // Number of columns of the grid.
+    for (int col = 0; col < _data.size(); ++col) _data[col].resize(nY + _nPadsNegY + _nPadsPosY, 0);
+
+}
+
+template<class T> CaslArray2D<T>:: CaslArray2D(int nX, int nY, int nPads) {
+    _nX        = nX;
+    _nY        = nY;
+    _nPadsNegX = nPads;
+    _nPadsPosX = nPads;
+    _nPadsNegY = nPads;
+    _nPadsPosY = nPads;
+    _data.resize(_nX + _nPadsNegX + _nPadsPosX);   // Number of columns of the grid.
+    for (int col = 0; col < _data.size(); ++col) _data[col].resize(nY + _nPadsNegY + _nPadsPosY, 0);
+
+}
+
+template<class T> CaslArray2D<T>:: CaslArray2D(int nX, int nY) {
+    _nX        = nX;
+    _nY        = nY;
+    _nPadsNegX = 0;
+    _nPadsPosX = 0;
+    _nPadsNegY = 0;
+    _nPadsPosY = 0;
+    _data.resize(_nX + _nPadsNegX + _nPadsPosX);   // Number of columns of the grid.
+    for (int col = 0; col < _data.size(); ++col) _data[col].resize(nY + _nPadsNegY + _nPadsPosY, 0);
+
+}
+
 /*
  * Copy Constructor
  */
