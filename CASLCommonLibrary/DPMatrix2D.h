@@ -2,7 +2,7 @@
 #define CASLUNIFORM_SESOLVER_H
 
 #include <vector>
-#include "../../CASLUniformLibrary/Arrays/CaslArray2D.h"
+#include "CaslArray2D.h"
 #include <cmath>
 #include <complex>
 
