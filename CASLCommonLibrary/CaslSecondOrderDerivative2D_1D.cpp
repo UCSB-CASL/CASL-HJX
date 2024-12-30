@@ -944,7 +944,7 @@ void CaslSecondOrderDerivative2D<T>::linearBoundarySolve(CaslArray2D<T>& RHS, T 
     double wx, wy;
     vector<T> bx(nX - 2, center + 2*ax);
     vector<T> by(nY - 2, center + 2*ay);
-    double corner = center + 2*(ax + ay);
+    double corner = 0;
 
     // Boundary for tridiagonal solve
 
