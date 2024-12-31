@@ -92,7 +92,7 @@ private:
     void triDiagonalMatrixSolver             (CaslArray2D<double>& A, CaslArray2D<double>& RHS, CaslArray2D<double>& X);
     void invertMatrix                        (CaslArray2D<T>& A, CaslArray2D<T>& inverseA);
     void invertMatrixAndMultiply             (CaslArray2D<T>& A, CaslArray2D<T>& RHS, CaslArray2D<T>& solution);
-    void linearBoundarySolve                 (CaslArray2D<T>& RHS, T center, T ax, T ay);
+    void linearBoundarySolve                 (CaslArray2D<T>& unp1, CaslArray2D<T>& RHS, T center, T ax, T ay);
 
     void computeDxx                          (const CaslArray2D<double>& un, CaslArray2D<double>& Dxx);
     void computeDxxForwardTimeCentralSpacing (const CaslArray2D<double>& un, CaslArray2D<double>& Dxx);

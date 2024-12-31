@@ -237,6 +237,11 @@ void CaslSecondOrderDerivative2D<T>::backwardTimeCentralSpacing(CaslArray2D<doub
                 }
             }
 
+            if (_diffusionCoefficient == 0) {
+                unp1 = RHS;
+                return;
+            }
+
             double dx    = _grid.dx();
             double dy    = _grid.dy();
             double alpha_x = _diffusionCoefficient * ( _dt / (dx * dx));
@@ -258,11 +263,11 @@ void CaslSecondOrderDerivative2D<T>::backwardTimeCentralSpacing(CaslArray2D<doub
                 LaplacianSolver.dirichletBoundary(beta, -alpha_x, -alpha_y, beta);
                 LaplacianSolver.ILU(L, U);
 
-                linearBoundarySolve(RHS, beta, -alpha_x, -alpha_y);
+                linearBoundarySolve(unp1, RHS, beta, -alpha_x, -alpha_y);
                 LaplacianSolver.preprocessInner(RHS);
 
-                LaplacianSolver.conjGrad_NULL(unp1, RHS, tolerance, 15);
-                LaplacianSolver.conjGradILU_NULL(unp1, RHS, L, U, tolerance, iterations);
+                LaplacianSolver.conjGrad(unp1, RHS, tolerance, 15);
+                LaplacianSolver.conjGradILU(unp1, RHS, L, U, tolerance, iterations);
             }
 
             if (_boundaryCondition == withPeriodicCondition) {
@@ -459,6 +464,10 @@ void CaslSecondOrderDerivative2D<T>::crankNicolson(CaslArray2D<double>& un, Casl
                 }
             }
 
+            if (_diffusionCoefficient == 0) {
+                unp1 = RHS;
+                return;
+            }
 
             if (_boundaryCondition == withConstantExtrapolation) {
                 DPMatrix2D<double> LaplacianSolver(nX, nY), L(nX, nY), U(nX, nY);
@@ -475,7 +484,7 @@ void CaslSecondOrderDerivative2D<T>::crankNicolson(CaslArray2D<double>& un, Casl
                 LaplacianSolver.dirichletBoundary(beta, -alpha_x, -alpha_y, beta);
                 LaplacianSolver.ILU(L, U);
 
-                linearBoundarySolve(RHS, beta, -alpha_x, -alpha_y);
+                linearBoundarySolve(unp1, RHS, beta, -alpha_x, -alpha_y);
                 LaplacianSolver.preprocessInner(RHS);
 
                 LaplacianSolver.conjGrad_NULL(unp1, RHS, tolerance, 15);
@@ -945,32 +954,31 @@ void CaslSecondOrderDerivative2D<T>::invertMatrixAndMultiply(CaslArray2D<T>& A, 
 }
 
 template <class T>
-void CaslSecondOrderDerivative2D<T>::linearBoundarySolve(CaslArray2D<T>& RHS, T center, T ax, T ay){
+void CaslSecondOrderDerivative2D<T>::linearBoundarySolve(CaslArray2D<T>& unp1, CaslArray2D<T>& RHS, T center, T ax, T ay){
     int nX = RHS.nX();
     int nY = RHS.nY();
 
     double wx, wy;
     vector<T> bx(nX - 2, center + 2*ax);
     vector<T> by(nY - 2, center + 2*ay);
-    double corner = 0;
 
     // Boundary for tridiagonal solve
 
-    RHS(1 , 1 ) = corner;
-    RHS(2 , 1 ) -= ax * corner;
-    RHS(1 , 2 ) -= ay * corner;
+    RHS(1 , 1 ) = unp1(1, 1);
+    RHS(2 , 1 ) -= ax * unp1(1, 1);
+    RHS(1 , 2 ) -= ay * unp1(1, 1);
 
-    RHS(1 , nY) = corner;
-    RHS(2 , nY  ) -= ax * corner;
-    RHS(1 , nY-1) -= ay * corner;
+    RHS(1 , nY) = unp1(1, nY);
+    RHS(2 , nY  ) -= ax * unp1(1, nY);
+    RHS(1 , nY-1) -= ay * unp1(1, nY);
 
-    RHS(nX, 1 ) = corner;
-    RHS(nX-1, 1) -= ax * corner;
-    RHS(nX  , 2) -= ay * corner;
+    RHS(nX, 1 ) = unp1(nX, 1 );
+    RHS(nX-1, 1) -= ax * unp1(nX, 1 );
+    RHS(nX  , 2) -= ay * unp1(nX, 1 );
 
-    RHS(nX, nY) = corner;
-    RHS(nX-1, nY  ) -= ax * corner;
-    RHS(nX  , nY-1) -= ay * corner;
+    RHS(nX, nY) = unp1(nX, nY );
+    RHS(nX-1, nY  ) -= ax * unp1(nX, nY);
+    RHS(nX  , nY-1) -= ay * unp1(nX, nY);
 
     /// Forward sub
     // X
