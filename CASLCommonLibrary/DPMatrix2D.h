@@ -188,7 +188,7 @@ public:
     vector<vector<complex<T>>> fft(const vector<vector<complex<T>>>& x, bool inverse=false);
     vector<vector<complex<T>>> fft2D(const CaslArray2D<T>& x);
     CaslArray2D<T> ifft2D(const vector<vector<complex<T>>>& x);
-    CaslArray2D<T> solve(const CaslArray2D<T>& x);
+    void solve(CaslArray2D<T>& x, const CaslArray2D<T>& b);
 };
 
 template<class T> class DPMatrixPeriodic2D: public DPMatrix2D<T>{

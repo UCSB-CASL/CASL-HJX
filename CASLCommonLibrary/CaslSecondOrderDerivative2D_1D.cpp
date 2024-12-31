@@ -272,7 +272,7 @@ void CaslSecondOrderDerivative2D<T>::backwardTimeCentralSpacing(CaslArray2D<doub
 
             if (_boundaryCondition == withPeriodicCondition) {
                 PeriodicSolver<double> LaplacianSolver(beta, -alpha_x, -alpha_y, nX, nY);
-                unp1 = LaplacianSolver.solve(RHS);
+                LaplacianSolver.solve(unp1, RHS);
 
             }
 
@@ -493,7 +493,7 @@ void CaslSecondOrderDerivative2D<T>::crankNicolson(CaslArray2D<double>& un, Casl
 
             if (_boundaryCondition == withPeriodicCondition) {
                 PeriodicSolver<double> LaplacianSolver(beta, -alpha_x, -alpha_y, nX, nY);
-                unp1 = LaplacianSolver.solve(RHS);
+                LaplacianSolver.solve(unp1, RHS);
 
             }
 

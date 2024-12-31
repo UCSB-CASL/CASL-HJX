@@ -748,8 +748,8 @@ CaslArray2D<T> PeriodicSolver<T>::ifft2D(const vector<vector<complex<T>>>& x){
 }
 
 template <class T>
-CaslArray2D<T> PeriodicSolver<T>::solve(const CaslArray2D<T>& x){
-    vector<vector<complex<T>>> x_hat = fft2D(x);
+void PeriodicSolver<T>::solve(CaslArray2D<T>& x, const CaslArray2D<T>& b){
+    vector<vector<complex<T>>> x_hat = fft2D(b);
     int N = x_hat.size();
     int M = x_hat[0].size();
 
@@ -763,8 +763,10 @@ CaslArray2D<T> PeriodicSolver<T>::solve(const CaslArray2D<T>& x){
             else x_hat[i][j] /= p;
         };
 
+    CaslArray2D<T> solved = ifft2D(x_hat);
 
-    return ifft2D(x_hat);
+    for (int i = 1; i <= nX; ++i) for (int j = 1; j <= nY; ++j)
+        x(i, j) = solved(i, j);
 }
 
 /// Periodic Matrix
