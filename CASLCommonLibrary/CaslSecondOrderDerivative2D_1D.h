@@ -79,8 +79,8 @@ public:
     double findCFLHamiltonianDiffusion           (const CaslArray2D<double>& un, double time);               // dt based on the CFL Condition for advection-diffusion tyoe equatiosn
     void forwardTimeCentralSpacing               (const CaslArray2D<double>& un, CaslArray2D<double>& unp1); // FTCS
     void forwardTimeCentralSpacingWithMixedDerivs(const CaslArray2D<double>& un, CaslArray2D<double>& unp1); // FTCS with mixed derivatives
-    void backwardTimeCentralSpacing              (CaslArray2D<double> &un, CaslArray2D<double> &unp1, T tolerance=1e-9, int iterations=10000);       // BTCS
-    void crankNicolson                           (CaslArray2D<double> &un, CaslArray2D<double>& unp1, T tolerance=1e-9, int iterations=10000); // Crank Nicolson (average of FTCS and BTCS)
+    void backwardTimeCentralSpacing              (CaslArray2D<double> &un, CaslArray2D<double> &unp1, T tolerance=1e-10, int iterations=10000); // BTCS
+    void crankNicolson                           (CaslArray2D<double> &un, CaslArray2D<double>& unp1, T tolerance=1e-10, int iterations=10000); // Crank Nicolson (average of FTCS and BTCS)
 
 private:
     void heatEquationDimension               (int & dimension);

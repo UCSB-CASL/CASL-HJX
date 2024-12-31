@@ -245,11 +245,11 @@ void CaslSecondOrderDerivative2D<T>::backwardTimeCentralSpacing(CaslArray2D<doub
 
             if (_boundaryCondition == withConstantExtrapolation) {
                 DPMatrix2D<double> LaplacianSolver(nX, nY), L(nX, nY), U(nX, nY);
-                LaplacianSolver.constantBoundary(beta, -alpha_x, -alpha_y);
+                LaplacianSolver.neumannBoundary(beta, -alpha_x, -alpha_y);
                 LaplacianSolver.ILU(L, U);
 
-                LaplacianSolver.conjGrad_NULL(unp1, RHS, tolerance, 15);
-                LaplacianSolver.conjGradILU_NULL(unp1, RHS, L, U, tolerance, iterations);
+                LaplacianSolver.conjGrad(unp1, RHS, tolerance, 15);
+                LaplacianSolver.conjGradILU(unp1, RHS, L, U, tolerance, iterations);
             }
 
             if (_boundaryCondition == withLinearExtrapolation){
