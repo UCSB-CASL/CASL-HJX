@@ -296,7 +296,7 @@ void CaslSecondOrderDerivative2D<T>::crankNicolson(CaslArray2D<double>& un, Casl
 
     switch (dimension) {
         case 1: {  // Diffusion term: u_xx
-            CaslArray2D<double> DxxExplicit(nX, nX), Dxx(nX, nX), RHS(nX, nY);
+            CaslArray2D<double> Dxx(nX, nX), RHS(nX, nY);
             un.fillPaddingPoints(_boundaryCondition);
             CaslArray2D<T> numericalHamiltonian = _HJSolver.computeNumericalHamiltonian(un);
 
@@ -304,28 +304,26 @@ void CaslSecondOrderDerivative2D<T>::crankNicolson(CaslArray2D<double>& un, Casl
             // Halve diffusion coefficient temporarily for crank-nicolson
             _diffusionCoefficient = 0.5 * _diffusionCoefficient;
 
-            // Compute explicit u_xx term
-            computeDxxForwardTimeCentralSpacing(un, DxxExplicit);
-
-            // Compute the coefficient matrix (Dxx)
-            computeDxx(un, Dxx);
-
             // Compute the right-hand side (RHS)
             for (int i = 1; i <= nX; i++) {
                 for (int j = 1; j <= nY; j++) {
                     // For test cases that there is inhomogeneous BC at x = L(i = nX) || x = 0(i = 1):
                     // Change the whole RHS(i, j) with the function formula
                     RHS(i, j) = un(i, j);
+                    // Add explicit u_yy term
+                    RHS(i, j) += _dt * _diffusionCoefficient * (un(i-1,j) - 2*un(i,j)) + un(i+1,j) / pow(_grid.dx(),-2);
+
                     // Add numerical hamiltonian
                     // Compute the numerical Hamiltonian at time step: n, solving explicitly
                     RHS(i, j) -= _dt * numericalHamiltonian(i, j);
 
                     // Compute the heat source term at time step: n
                     auto sourceTerm_ij = _inhomogeneousTermFunction(_grid, i, j, _time, dimension);
-                    RHS(i, j) += _dt * sourceTerm_ij;
+                    RHS(i, j) += 0.5*_dt * sourceTerm_ij;
+                    // Compute the heat source term at time step: n+1
+                    sourceTerm_ij = _inhomogeneousTermFunction(_grid, i, j, _time + _dt, dimension);
+                    RHS(i, j) += 0.5*_dt * sourceTerm_ij;
 
-                    // Add explicit u_xx term
-                    RHS(i, j) += _diffusionCoefficient * _dt * DxxExplicit(i, j);
                 }
             }
 
@@ -360,15 +358,12 @@ void CaslSecondOrderDerivative2D<T>::crankNicolson(CaslArray2D<double>& un, Casl
         }
 
         case 2: {  // Diffusion term: u_yy
-            CaslArray2D<double> DyyExplicit(nY, nY), Dyy(nY, nY), RHS(nX, nY);
+            CaslArray2D<double> Dyy(nY, nY), RHS(nX, nY);
             un.fillPaddingPoints(_boundaryCondition);
             CaslArray2D<T> numericalHamiltonian = _HJSolver.computeNumericalHamiltonian(un);
 
             // Halve diffusion coefficient temporarily for crank-nicolson
             _diffusionCoefficient = 0.5 * _diffusionCoefficient;
-
-            // Compute explicit u_xx term
-            computeDyyForwardTimeCentralSpacing(un, DyyExplicit);
 
             // Compute the coefficient matrix (Dyy)
             computeDyy(un, Dyy);
@@ -379,6 +374,8 @@ void CaslSecondOrderDerivative2D<T>::crankNicolson(CaslArray2D<double>& un, Casl
                     // For test cases that there is inhomogeneous BC at x = L(i = nX) || x = 0(i = 1):
                     // Change the whole RHS(i, j) with the function formula
                     RHS(i, j) = un(i, j);
+                    // Add explicit u_yy term
+                    RHS(i, j) += _dt * _diffusionCoefficient * (un(i,j-1) - 2*un(i,j)) + un(i,j+1) / pow(_grid.dy(),-2);
 
                     // Add numerical hamiltonian
                     // Compute the numerical Hamiltonian at time step: n, solving explicitly
@@ -386,10 +383,12 @@ void CaslSecondOrderDerivative2D<T>::crankNicolson(CaslArray2D<double>& un, Casl
 
                     // Compute the heat source term at time step: n
                     auto sourceTerm_ij = _inhomogeneousTermFunction(_grid, i, j, _time, dimension);
-                    RHS(i, j) += _dt * sourceTerm_ij;
+                    RHS(i, j) += 0.5*_dt * sourceTerm_ij;
+                    // Compute the heat source term at time step: n+1
+                    sourceTerm_ij = _inhomogeneousTermFunction(_grid, i, j, _time + _dt, dimension);
+                    RHS(i, j) += 0.5*_dt * sourceTerm_ij;
 
-                    // Add explicit u_yy term
-                    RHS(i, j) += _dt * _diffusionCoefficient * DyyExplicit(i, j);
+
                 }
             }
 
@@ -422,12 +421,17 @@ void CaslSecondOrderDerivative2D<T>::crankNicolson(CaslArray2D<double>& un, Casl
         }
 
         case 12: { // 2D Diffusion term
-            CaslArray2D<double> RHS(nX, nY), Dxx(nX, nY), Dyy(nX, nY);
+            CaslArray2D<double> RHS(nX, nY);
             un.fillPaddingPoints(_boundaryCondition);
             CaslArray2D<T> numericalHamiltonian = _HJSolver.computeNumericalHamiltonian(un);
 
-            computeDxxForwardTimeCentralSpacing(un, Dxx);
-            computeDyyForwardTimeCentralSpacing(un, Dyy);
+            double dx    = _grid.dx();
+            double dy    = _grid.dy();
+            double alpha_x = 0.5 * _diffusionCoefficient * ( _dt / (dx * dx));
+            double alpha_y = 0.5 * _diffusionCoefficient * ( _dt / (dy * dy));
+            double beta0  = - 2.0 * (alpha_x + alpha_y);
+            double beta  = 1.0 - beta0;
+
 
             // Compute the right-hand side (RHS)
             for (int i = 1; i <= nX; i++) {
@@ -436,52 +440,56 @@ void CaslSecondOrderDerivative2D<T>::crankNicolson(CaslArray2D<double>& un, Casl
                     // Change the whole RHS(i, j) with the function formula
                     RHS(i, j) = un(i, j);
 
+                    // Add explicit term
+                    RHS(i, j) += beta0*un(i, j) + alpha_x*(un(i-1, j) + un(i+1,j)) + alpha_y*(un(i,j-1) + un(i,j+1));
+
                     // Add numerical hamiltonian
                     // Compute the numerical Hamiltonian at time step: n, solving explicitly
                     RHS(i, j) -= _dt * numericalHamiltonian(i, j);
 
                     // Compute the heat source term at time step: n
                     auto sourceTerm_ij = _inhomogeneousTermFunction(_grid, i, j, _time, dimension);
-                    RHS(i, j) += _dt * sourceTerm_ij;
+                    RHS(i, j) += 0.5 * _dt * sourceTerm_ij;
 
-                    // Add explicit term
-                    RHS(i, j) += _dt * 0.5 * _diffusionCoefficient * (Dxx(i, j) + Dyy(i, j));
+                    // Compute the heat source term at time step: n+1
+                    sourceTerm_ij = _inhomogeneousTermFunction(_grid, i, j, _time + _dt, dimension);
+                    RHS(i, j) += 0.5 * _dt * sourceTerm_ij;
+
+
                 }
             }
 
-            double dx    = _grid.dx();
-            double dy    = _grid.dy();
-            double alpha_x = 0.5 * _diffusionCoefficient * ( _dt / (dx * dx));
-            double alpha_y = 0.5 * _diffusionCoefficient * ( _dt / (dy * dy));
-            double beta  = 1.0 + 2.0 * (alpha_x + alpha_y);
 
             if (_boundaryCondition == withConstantExtrapolation) {
-                DPMatrix2D<double> LaplacianSolver(nX, nY);
-                LaplacianSolver.constantBoundary(beta, -alpha_x, -alpha_y);
+                DPMatrix2D<double> LaplacianSolver(nX, nY), L(nX, nY), U(nX, nY);
+                LaplacianSolver.neumannBoundary(beta, -alpha_x, -alpha_y);
+                LaplacianSolver.ILU(L, U);
 
-                LaplacianSolver.conjGrad(unp1, RHS, tolerance, iterations);
+                LaplacianSolver.conjGrad_NULL(unp1, RHS, tolerance, 15);
+                LaplacianSolver.conjGradILU_NULL(unp1, RHS, L, U, tolerance, iterations);
             }
 
             if (_boundaryCondition == withLinearExtrapolation){
-                DPMatrix2D<double> LaplacianSolver(nX, nY);
-                LaplacianSolver.linearBoundary(beta, -alpha_x, -alpha_y);
+                DPMatrix2D<double> LaplacianSolver(nX, nY), L(nX, nY), U(nX, nY);
 
-                LaplacianSolver.conjGrad(unp1, RHS, tolerance, iterations);
+                LaplacianSolver.dirichletBoundary(beta, -alpha_x, -alpha_y, beta);
+                LaplacianSolver.ILU(L, U);
+
+                linearBoundarySolve(RHS, beta, -alpha_x, -alpha_y);
+                LaplacianSolver.preprocessInner(RHS);
+
+                LaplacianSolver.conjGrad_NULL(unp1, RHS, tolerance, 15);
+                LaplacianSolver.conjGradILU_NULL(unp1, RHS, L, U, tolerance, iterations);
             }
 
             if (_boundaryCondition == withPeriodicCondition) {
-                // TODO: implement ILU with less sparse structure (condition number too high)
-//                DPMatrixPeriodic2D<double> LaplacianSolver(nX, nY);
-//                LaplacianSolver.periodicBoundary(beta, -alpha_x, -alpha_y);
-//
-//                LaplacianSolver.conjGrad(unp1, RHS, 1e-9, 1000);
+                PeriodicSolver<double> LaplacianSolver(beta, -alpha_x, -alpha_y, nX, nY);
+                unp1 = LaplacianSolver.solve(RHS);
 
-                std::cerr << "In CaslSecondOrderDerivative2D::backwardTimeCentralSpacing, Invalid heat equation dimension for withPeriodicCondition! EXITING." << std::endl;
-                exit(1);
             }
 
             if (_boundaryCondition == withQuadraticExtrapolation) {
-                // TODO: less sparse structure for non-adjacent cells
+                // TODO: find sufficiently good preconditioner for singular matrix
                 std::cerr << "In CaslSecondOrderDerivative2D::backwardTimeCentralSpacing, Invalid heat equation dimension for withQuadraticExtrapolation! EXITING." << std::endl;
                 exit(1);
             }
