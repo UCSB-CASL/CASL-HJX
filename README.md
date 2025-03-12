@@ -169,6 +169,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Author
 
 Faranak Rajabi
+Jacob Fingerman
+Andrew Wang
+Jeff Moehlis
+Frederic Gibou
 
 ## Contact
 
