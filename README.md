@@ -1,4 +1,4 @@
-# CASLHJB2D
+# CASL-HJBX
 
 A C++ library for solving Hamilton-Jacobi-Bellman equations in 2D, with specific applications for Linear Quadratic Regulator (LQR) and other control problems.
 
