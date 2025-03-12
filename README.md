@@ -1,4 +1,4 @@
-# CASL-HJBX
+# CASL-HJX
 
 A C++ library for solving Hamilton-Jacobi-Bellman equations in 2D, with specific applications for Linear Quadratic Regulator (LQR) and other control problems.
 
@@ -14,7 +14,7 @@ A C++ library for solving Hamilton-Jacobi-Bellman equations in 2D, with specific
 ## Project Structure
 
 ```
-CASLHJB2D/                  
+CASL-HJBX/                  
 ├── CMakeLists.txt          # Main CMake configuration
 ├── CASLCommonLibrary/      # Core library components
 │   ├── CASLArray2D.cpp     # 2D array implementation
@@ -96,8 +96,8 @@ brew install llvm cmake
 
 2. Clone and build the project:
 ```bash
-git clone https://github.com/yourusername/CASLHJB2D.git
-cd CASLHJB2D
+git clone https://github.com/yourusername/CASL-HJX.git
+cd CASL-HJX
 mkdir build && cd build
 cmake ..
 make
@@ -168,11 +168,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Author
 
-Faranak Rajabi
-Jacob Fingerman
-Andrew Wang
-Jeff Moehlis
-Frederic Gibou
+- Faranak Rajabi
+- Jacob Fingerman
+- Andrew Wang
+- Jeff Moehlis
+- Frederic Gibou
 
 ## Contact
 
