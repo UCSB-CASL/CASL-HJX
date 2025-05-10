@@ -6,6 +6,8 @@
 #define CASL_SECOND_ORDER_DERIVATIVE_CPP
 
 #include "CaslSecondOrderDerivative2D_1D.h"
+#include "DPMatrix2D.h"
+#include "DPMatrix2D.cpp"
 
 template <class T>
 CaslSecondOrderDerivative2D<T>::CaslSecondOrderDerivative2D(
@@ -216,7 +218,7 @@ void CaslSecondOrderDerivative2D<T>::backwardTimeCentralSpacing(CaslArray2D<doub
         }
 
         case 12: { // 2D Diffusion term
-            CaslArray2D<double> RHS(nX, nY);
+            CaslArray2D<double> RHS = un;
             un.fillPaddingPoints(_boundaryCondition);
             CaslArray2D<T> numericalHamiltonian = _HJSolver.computeNumericalHamiltonian(un);
 
@@ -426,7 +428,7 @@ void CaslSecondOrderDerivative2D<T>::crankNicolson(CaslArray2D<double>& un, Casl
         }
 
         case 12: { // 2D Diffusion term
-            CaslArray2D<double> RHS(nX, nY);
+          CaslArray2D<double> RHS = un;
             un.fillPaddingPoints(_boundaryCondition);
             CaslArray2D<T> numericalHamiltonian = _HJSolver.computeNumericalHamiltonian(un);
 

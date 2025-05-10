@@ -52,6 +52,7 @@ add_library(CASLCommonLibrary
         CASLCommonLibrary/CaslHamiltonian2D.cpp
         CASLCommonLibrary/CASLRK4.cpp
         CASLCommonLibrary/CASLSecondOrderDerivative2D_1D.cpp
+        CASLCommonLibrary/DPMatrix2D.cpp
 )
 
 # Set properties for the common library
@@ -72,3 +73,11 @@ add_subdirectory(CASLProjects/projectDeterministicHH2D)
 add_subdirectory(CASLProjects/projectStochasticHH2D)
 add_subdirectory(CASLProjects/projectLQR2D)
 add_subdirectory(CASLProjects/projectLaplacian2D_1D)
+
+add_subdirectory(CASLProjects/projectDiffusion)
+add_subdirectory(CASLProjects/projectAdvectionDiffusion)
+add_subdirectory(CASLProjects/projectWave)
+add_subdirectory(CASLProjects/projectBurgers)
+add_subdirectory(CASLProjects/projectAdvection)
+
+add_subdirectory(CASLProjects/projectBurgersMMS)
