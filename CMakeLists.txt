@@ -76,8 +76,5 @@ add_subdirectory(CASLProjects/projectLaplacian2D_1D)
 
 add_subdirectory(CASLProjects/projectDiffusion)
 add_subdirectory(CASLProjects/projectAdvectionDiffusion)
-add_subdirectory(CASLProjects/projectWave)
 add_subdirectory(CASLProjects/projectBurgers)
 add_subdirectory(CASLProjects/projectAdvection)
-
-add_subdirectory(CASLProjects/projectBurgersMMS)
