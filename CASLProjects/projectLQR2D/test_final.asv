@@ -1,0 +1,79 @@
+clear all; close all; clc; 
+
+grid_sizes = [20 30 40 50 60];
+times = 0:5; 
+tFinal = 5; 
+
+for N = grid_sizes
+    output_dir = './LQR2D_Output/'; 
+    grid_dir = sprintf('LQR2D_%d/phi/', N); 
+    % fig = figure(N); 
+    % fig.Position(3:4) = [560 1200]; 
+    for time = times
+        phi_file_name = sprintf('phi_t%d.dat', time); 
+        phi_dir = strcat(output_dir, grid_dir, phi_file_name);
+        pad = 3;
+        phi_file = readmatrix(phi_dir);
+        phi_file = phi_file(pad+1:end-pad, pad+1:end-pad);
+
+        [X1_full, X2_full] = meshgrid(linspace(-1, 1, N));
+        X1 = X1_full(pad+1:end-pad, pad+1:end-pad);
+        X2 = X2_full(pad+1:end-pad, pad+1:end-pad);
+        V_exact = exactSolution(X1, X2, time, tFinal); 
+        error = abs(V_exact - phi_file); 
+        max_error = max(error(:));
+
+        % Row index for this time step
+        row = time + 1;
+
+        % Column 1: Exact
+        subplot(6, 3, 3*(row-1) + 1);
+        surf(V_exact); 
+        title(sprintf('Exact, τ = %d', tFinal - time));
+        shading interp; view(3);
+
+        % Column 2: Numerical
+        subplot(6, 3, 3*(row-1) + 2);
+        surf(phi_file); 
+        title(sprintf('Numerical, τ = %d', tFinal - time));
+        shading interp; view(3);
+
+        % Column 3: Error
+        subplot(6, 3, 3*(row-1) + 3);
+        surf(error); 
+        title(sprintf('Error (Max = %.2e)', max_error));
+        shading interp; view(3);
+    end
+
+    % sgtitle(sprintf('Grid Size: %d', N));
+    fprintf('Max Error: %d, for Grid: %d \n', max_error, N)
+    % filename = sprintf('LQR2D_Comparison_GridSize%d.jpg', N);
+    % exportgraphics(fig, filename, 'ContentType', 'vector');  
+end
+
+function V_exact = exactSolution(X1, X2, t, tFinal)
+    % Riccati-based exact solution from backward integration
+    persistent K_sol t_sol
+
+    if isempty(K_sol)
+        A = [0 1; 0 0];
+        B = [0; 1];
+        Q = eye(2);
+        R = eye(1);
+        P_T = eye(2);  % terminal cost
+        K0 = reshape(P_T, [], 1);
+        opts = odeset('RelTol', 1e-13, 'AbsTol', 1e-13);
+        [t_sol, K_sol] = ode45(@(t, K) ode_gain(t, K, A, B, Q, R), ...
+                               [tFinal:-0.01:0], K0, opts);
+    end
+
+    tau = tFinal - t;
+    K_interp = reshape(interp1(t_sol, K_sol, tau, 'pchip'), 2, 2);
+    V_exact = 0.5 * (K_interp(1,1)*X1.^2 + 2*K_interp(1,2)*X1.*X2 + K_interp(2,2)*X2.^2);
+end
+
+function dK = ode_gain(~, K, A, B, Q, R)
+    K_mat = reshape(K, size(A));
+    dK_mat = -(A' * K_mat + K_mat * A - K_mat * B * (R \ B') * K_mat + Q);
+    dK = reshape(dK_mat, [], 1);
+end
