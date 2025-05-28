@@ -81,9 +81,10 @@ double CaslHamiltonianLQR2D::H(double phi_x, double phi_y, int i, int j, double 
         [      -K1_2*K2_1,       K1_1 - K1_2*K2_2]
         [K1_1 - K2_1*K2_2, - K2_2^2 + K1_2 + K2_1]
      */
-    double Hamiltonian = - (pow(phi_y, 2) / 2.0) + phi_x * _fx1(i, j) +
-                         (1.0 / 2.0) * (pow(_grid.x(i), 2) + pow(_grid.y(j), 2));
-
+    // double Hamiltonian = - (pow(phi_y, 2) / 2.0) + phi_x * _fx1(i, j) +
+    //                      (1.0 / 2.0) * (pow(_grid.x(i), 2) + pow(_grid.y(j), 2));
+    // double Hamiltonian = - (pow(phi_y, 2) / 2.0) ;
+    double Hamiltonian = phi_x * _fx1(i, j) + (1.0 / 2.0) * (pow(_grid.x(i), 2) + pow(_grid.y(j), 2));
     return (-1.0) * Hamiltonian;
 }
 

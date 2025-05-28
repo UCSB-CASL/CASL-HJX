@@ -1,123 +1,444 @@
-% LQR2D_Visualization.m
-% Creates a 6x3 subplot grid visualizing LQR value functions and errors
-% with correct folder structure and domain range
+%% Plot P‑matrix components vs time on four resolutions (20,40,80,160)
+%   • uniform y‑limits across each row
+%   • LaTeX fonts everywhere
+%   • fixes least‑squares bug (rhs must be a column vector)
 
-clear all; close all; clc;
+clear; close all; clc;
 
-% === Configuration ===
-gridSize = 80;           % Grid size to visualize
-tFinal = 5;              % Final time
-times = 0:5;             % Time points to visualize (t=0,1,2,3,4,5)
-domainRange = 2;         % Domain range [-domainRange, domainRange]²
-dt = 0.01;               % Time step dt value to visualize
+% ------------------------------------------------------------------
+% 1.  Simulation metadata
+% ------------------------------------------------------------------
+gridSizes  = [20 40 80 160 320];                             % resolutions
+file_times = [0 0.1:0.1:1 1.5 2 2.5 3 4 5 10];           % exported snapshots
+domain     = [-4 4 -4 4];                                % physical Ω
 
-% Output directory with proper grid size subfolder
-output_dir = sprintf('./LQR2D_Output_dt%.2f/LQR2D_%d/', dt, gridSize);
+% ------------------------------------------------------------------
+% 2.  Analytical Riccati reference
+% ------------------------------------------------------------------
+A=[0 1;0 0]; B=[0;1]; Q=eye(2); R=1;
+P0vec = eye(2);
+[tRic,Pvec] = ode45(@(t,P) riccati_rhs(t,P,A,B,Q,R), ...
+                    [0 file_times(end)], P0vec(:));
+Pana = reshape(Pvec.',2,2,[]);   % 2×2×Nt
 
-% === Setup figure with LaTeX formatting ===
-figure('Position', [50, 50, 420, 1200]);
-set(groot, 'defaultAxesFontSize', 12);
-set(groot, 'defaultTextInterpreter', 'latex');
-set(groot, 'defaultAxesTickLabelInterpreter', 'latex');
-set(groot, 'defaultLegendInterpreter', 'latex');
-set(groot, 'defaultColorbarTickLabelInterpreter', 'latex');
+% component helpers
+pNames = {'$P_{11}$','$P_{12}$','$P_{22}$'};
+rowMap = [1 1 2];   colMap = [1 2 2];
+rows = 3; cols = numel(gridSizes);
 
-% === Create coordinate grid ===
-[X1, X2] = meshgrid(linspace(-domainRange, domainRange, gridSize));
+% y‑limits per component (pad 5 %)
+YLIMS = [min(Pana(1,1,:)) max(Pana(1,1,:));
+         min(Pana(1,2,:)) max(Pana(1,2,:));
+         min(Pana(2,2,:)) max(Pana(2,2,:))];
+YLIMS = YLIMS + [-.05 .05];
 
-% === Loop over time points (t=0,1,2,3,4,5) ===
-for timeIdx = 1:length(times)
-    time = times(timeIdx);
-    tau = tFinal - time;  % Convert to tau (goes backward)
+% ------------------------------------------------------------------
+% 3.  Figure setup
+% ------------------------------------------------------------------
+fig = figure('Position',[50 50 1600 900],'Color','w');
+clr = [0 0.447 0.741 ; 0.85 0.325 0.098];    % numerical / analytical
+
+for p = 1:rows
+    for g = 1:cols
+        ax = subplot(rows,cols,(p-1)*cols+g); hold(ax,'on');
+        N  = gridSizes(g);
+        folder = sprintf('./LQR2D_Output/LQR2D_%d/phi/',N);
+
+        % ----------------------------------------------------------
+        % numerical extraction
+        numP = nan(numel(file_times),1);
+        [X,Y] = meshgrid(linspace(domain(1),domain(2),N));
+        buf = 3; idx = buf:N-buf+1;                              % interior
+        Xs = X(idx,idx);  Ys = Y(idx,idx);
+        Af = [0.5*Xs(:).^2 , Xs(:).*Ys(:) , 0.5*Ys(:).^2];       % design
+
+        for k = 1:numel(file_times)
+            f = fullfile(folder,['phi_t' time_string(file_times(k)) '.dat']);
+            if ~isfile(f), warning('Missing %s',f); continue, end
+            phi = reshape(load(f),N,N)';
+            phiBlock = phi(idx,idx);
+            coeff    = Af \ phiBlock(:);                        % rhs as vector
+            numP(k) = coeff(p);
+        end
+
+        % analytical curve for this component
+        anaP = squeeze(Pana(rowMap(p),colMap(p),:));
+
+        % ----------------------------------------------------------
+        % plotting
+        plot(file_times,numP,'o-','LineWidth',2,'MarkerSize',6,'Color',clr(1,:));
+        plot(tRic,anaP,'-','LineWidth',2.5,'Color',clr(2,:));
+        ylim(YLIMS(p,:)); xlim([0 10]);
+        set(ax,'FontName','Times','FontSize',12,'TickLabelInterpreter','latex', ...
+            'LineWidth',1.5);
+        if g==1, ylabel(pNames{p},'Interpreter','latex','FontSize',14); end
+        if p==rows, xlabel('Time','Interpreter','latex','FontSize',14); end
+        text(0.6,1.15, sprintf('$N=%d$',N), 'Units','normalized', ...
+             'Interpreter','latex','HorizontalAlignment','right','FontSize',12);
+        legend({'Numerical','Analytical'},'Interpreter','latex','Location','southeast');
+        % --- L2 error annotation -------------------------------------
+        errVec  = numP - interp1(tRic,anaP,file_times,'pchip')';
+        l2err   = sqrt(mean(errVec.^2));
+        pcterr  = 100*l2err/max(abs(anaP));
+        text(0.25,1.05, sprintf('$\\|e\\|_{2}=%.2e$ (%.1f\\%%)', l2err, pcterr), ...
+            'Units','normalized','Interpreter','latex','FontSize',12);
+
+        box on;
+    end
+end
+
+% sgtitle('Evolution of $P$-matrix components','Interpreter','latex','FontSize',18);
+
+% save figure (optional)
+exportgraphics(fig,'P_matrix_vs_time.pdf', ...
+              'ContentType','vector', ...     % keep vectors
+              'Resolution',150, ...           % lower DPI
+              'BackgroundColor','none');      % transparent
+
+% ------------------------------------------------------------------
+% 5.  2×5 snapshot maps for N = 160
+% ------------------------------------------------------------------
+Nbig = 160;
+snapTimes = [0 1 2 4 10];
+folder160 = sprintf('./LQR2D_Output/LQR2D_%d/phi/',Nbig);
+
+[X160,Y160] = meshgrid(linspace(domain(1),domain(2),Nbig));
+
+fig2 = figure('Position',[100 50 1400 600],'Color','w');
+for k = 1:numel(snapTimes)
+    t = snapTimes(k);
+    fname = fullfile(folder160,['phi_t' time_string(t) '.dat']);
+    if ~isfile(fname)
+        warning('Missing %s',fname); continue; end
+    phiNum = reshape(load(fname),Nbig,Nbig)';
+
+    % analytical snapshot
+    Pnow = squeeze(Pana(:,:,abs(tRic-t)<1e-12));
+    if isempty(Pnow)   % interpolate if exact match not present
+        Pnow = reshape(interp1(tRic,Pvec,t,'pchip'),2,2);
+    end
+    Vana = 0.5*(Pnow(1,1)*X160.^2 + 2*Pnow(1,2)*X160.*Y160 + Pnow(2,2)*Y160.^2);
+
+    % numerical (top row)
+    subplot(2,5,k); imagesc(linspace(-4,4,Nbig),linspace(-4,4,Nbig),phiNum);
+    axis equal tight; set(gca,'YDir','normal'); title(sprintf('$t=%.1f$ (num)',t),'Interpreter','latex');
+    colormap(parula);
+
+    % analytical (bottom row)
+    subplot(2,5,5+k); imagesc(linspace(-4,4,Nbig),linspace(-4,4,Nbig),Vana);
+    axis equal tight; set(gca,'YDir','normal'); title(sprintf('$t=%.1f$ (ana)',t),'Interpreter','latex');
+end
+sgtitle('$N=160$ snapshots: numerical (top) vs analytical (bottom)','Interpreter','latex');
+
+% save both figures (optional)
+% print(fig,'P_matrix_vs_time','-dpdf','-r300','-bestfit','-opengl');
+% print(fig2,'snapshots_N160','-dpdf','-r300','-bestfit','-opengl');
+
+% ------------------------------------------------------------------
+% 5.  2×5 snapshot **surf** plots for N = 160
+% ---------------------------------------------------------------
+Nbig = 160;
+snapTimes = [0 1 2 4 10];
+folder160 = sprintf('./LQR2D_Output/LQR2D_%d/phi/',Nbig);
+[X160,Y160] = meshgrid(linspace(domain(1),domain(2),Nbig));
+
+fig2 = figure('Position',[80 40 1500 700],'Color','w');
+for k = 1:numel(snapTimes)
+    t = snapTimes(k);
+    fname = fullfile(folder160,['phi_t' time_string(t) '.dat']);
+    if ~isfile(fname)
+        warning('Missing %s',fname); continue; end
+    phiNum = reshape(load(fname),Nbig,Nbig)';
+
+    % analytical value function at this time (interpolate if needed)
+    Pnow = squeeze(Pana(:,:,abs(tRic-t)<1e-12));
+    if isempty(Pnow)
+        Pnow = reshape(interp1(tRic,Pvec,t,'pchip'),2,2);
+    end
+    Vana = 0.5*(Pnow(1,1)*X160.^2 + 2*Pnow(1,2)*X160.*Y160 + Pnow(2,2)*Y160.^2);
+
+    % -------- numerical surf (top row) -------------------------
+    ax1 = subplot(2,5,k);
+    surf(ax1,X160,Y160,phiNum,'EdgeColor','none');
+    view(ax1,[45 30]); colormap(ax1,parula); shading interp;
+    title  (ax1, sprintf('$t=%.1f$', t), 'Interpreter','latex');
+    xlabel (ax1, '$x$',  'Interpreter','latex');
+    ylabel (ax1, '$y$',  'Interpreter','latex');
+    zlabel (ax1, '$V$',  'Interpreter','latex');
+    axis(ax1,'tight');
+
+    grid off; 
+    formatSubplot(gca)
+
+    % -------- analytical surf (bottom row) ---------------------
+    ax2 = subplot(2,5,5+k);
+    surf(ax2,X160,Y160,Vana,'EdgeColor','none');
+    view(ax2,[45 30]); colormap(ax2,parula); shading interp;
+    title  (ax2, sprintf('$t=%.1f$', t), 'Interpreter','latex');
+    xlabel (ax2, '$x$',  'Interpreter','latex');
+    ylabel (ax2, '$y$',  'Interpreter','latex');
+    zlabel (ax2, '$V$',  'Interpreter','latex');
+    axis(ax2,'tight');
+
+    grid off; 
+    formatSubplot(gca)
+end
+% sgtitle('$N=160$ snapshots: numerical (top) vs analytical (bottom)','Interpreter','latex');
+exportgraphics(fig2,'cost_snapshots.pdf', ...
+              'ContentType','vector', ...     % keep vectors
+              'Resolution',150, ...           % lower DPI
+              'BackgroundColor','none');      % transparent
+
+% ------------------------------------------------------------------
+% 5. SIMPLE CONVERGENCE ANALYSIS
+% ------------------------------------------------------------------
+
+fprintf('\n=== CONVERGENCE ANALYSIS ===\n');
+
+% Grid spacings
+h = (domain(2) - domain(1)) ./ (gridSizes - 1);
+
+% Storage for errors: 4 rows (P11, P12, P22, phi) × 4 grids
+errors = zeros(4, 4);  
+
+% Calculate L2 errors for P-matrix components
+for p = 1:3
+    fprintf('\nComponent P_%d%d:\n', rowMap(p), colMap(p));
     
-    % === Load numerical solution ===
-    phi_file_name = sprintf('phi_t%d.dat', time);
-    phi_dir = fullfile(output_dir, 'phi', phi_file_name);
+    for g = 1:4
+        N = gridSizes(g);
+        folder = sprintf('./LQR2D_Output/LQR2D_%d/phi/', N);
+        
+        % Numerical extraction (same as plotting section)
+        numP = nan(numel(file_times), 1);
+        [X, Y] = meshgrid(linspace(domain(1), domain(2), N));
+        buf = 3; 
+        idx = buf:N-buf+1;
+        Xs = X(idx, idx);  
+        Ys = Y(idx, idx);
+        Af = [0.5*Xs(:).^2, Xs(:).*Ys(:), 0.5*Ys(:).^2];
+        
+        for k = 1:numel(file_times)
+            f = fullfile(folder, ['phi_t' time_string(file_times(k)) '.dat']);
+            if ~isfile(f), continue; end
+            phi = reshape(load(f), N, N)';
+            phiBlock = phi(idx, idx);
+            coeff = Af \ phiBlock(:);  % rhs as vector
+            numP(k) = coeff(p);
+        end
+        
+        % Analytical curve for this component
+        anaP = squeeze(Pana(rowMap(p), colMap(p), :));
+        
+        % L2 error computation (exact same as plotting)
+        errVec = numP - interp1(tRic, anaP, file_times, 'pchip')';
+        l2err = sqrt(mean(errVec.^2, 'omitnan'));  % Handle NaN values
+        errors(p, g) = l2err;
+        
+        fprintf('  N=%3d: L2 error = %.3e\n', N, l2err);
+    end
+end
+
+% Calculate L2 errors for cost-to-go function φ itself
+fprintf('\nCost-to-go function φ:\n');
+test_times = [1.0, 2.5, 5.0, 10.0];  % Select a few time points
+
+for g = 1:5
+    N = gridSizes(g);
+    folder = sprintf('./LQR2D_Output/LQR2D_%d/phi/', N);
     
-    try
-        phi_file = readmatrix(phi_dir);
-    catch
-        warning('File not found: %s. Using zeros instead.', phi_dir);
-        phi_file = zeros(gridSize);
+    phi_errors = [];
+    [X, Y] = meshgrid(linspace(domain(1), domain(2), N));
+    
+    for t_test = test_times
+        f = fullfile(folder, ['phi_t' time_string(t_test) '.dat']);
+        if ~isfile(f), continue; end
+        
+        % Load numerical solution
+        phi_num = reshape(load(f), N, N)';
+        
+        % Compute analytical solution: φ(x,t) = 0.5 * x^T * P(t) * x
+        P_t = interp1(tRic, Pvec, t_test, 'pchip');  % P at time t
+        P_mat = reshape(P_t, 2, 2);
+        
+        phi_ana = zeros(N, N);
+        for i = 1:N
+            for j = 1:N
+                x_vec = [X(i,j); Y(i,j)];
+                phi_ana(i,j) = 0.5 * x_vec' * P_mat * x_vec;
+            end
+        end
+        
+        % Compute error over interior domain
+        buf = 3;
+        idx = buf:N-buf+1;
+        error_interior = phi_num(idx,idx) - phi_ana(idx,idx);
+        phi_errors(end+1) = sqrt(mean(error_interior(:).^2));
     end
     
-    % === Calculate exact solution ===
-    V_exact = exactSolution(X1, X2, time, tFinal);
-    
-    % === Calculate error ===
-    error = abs(V_exact - phi_file);
-    max_error = max(error(:));
-    l2_error = sqrt(mean(error(:).^2));
-    
-    % === Row index for this time step ===
-    row = time + 1;
-    
-    % === Column 1: Exact Solution ===
-    ax1 = subplot(6, 2, 2*(row-1) + 1);
-    surf(X1, X2, V_exact, 'EdgeColor', 'none');
-    title(sprintf('$\\textrm{Exact},\\ \\tau = %d$', tau), 'FontWeight', 'bold');
-    xlabel('$x_1$', 'FontWeight', 'bold');
-    ylabel('$x_2$', 'FontWeight', 'bold');
-    zlabel('$V(x,\\tau)$', 'FontWeight', 'bold');
-    view([-30, 30]);
-    colormap(ax1, parula);
-    grid off;
-    set(ax1, 'LineWidth', 1.5);
-    
-    % === Column 2: Numerical Solution ===
-    ax2 = subplot(6, 2, 2*(row-1) + 2);
-    surf(X1, X2, phi_file, 'EdgeColor', 'none');
-    title(sprintf('$\\textrm{Numerical},\\ \\tau = %d$', tau), 'FontWeight', 'bold');
-    xlabel('$x_1$', 'FontWeight', 'bold');
-    ylabel('$x_2$', 'FontWeight', 'bold');
-    zlabel('$V(x,\\tau)$', 'FontWeight', 'bold');
-    view([-30, 30]);
-    colormap(ax2, parula);
-    grid off;
-    set(ax2, 'LineWidth', 1.5);
-    
-    % % === Column 3: Error Visualization ===
-    % ax3 = subplot(6, 2, 2*(row-1) + 3);
-    % surf(X1, X2, error, 'EdgeColor', 'none');
-    % title(sprintf('$\\textrm{Error},\\ \\max = %.2e,\\ L_2 = %.2e$', max_error, l2_error), 'FontWeight', 'bold');
-    % xlabel('$x_1$', 'FontWeight', 'bold');
-    % ylabel('$x_2$', 'FontWeight', 'bold');
-    % zlabel('$|\\textrm{Error}|$', 'FontWeight', 'bold');
-    % view([-30, 30]);
-    % colormap(ax3, hot);
-    % grid off;
-    % set(ax3, 'LineWidth', 1.5);
-end
-
-% === Add overall title with LaTeX ===
-% sgtitle(sprintf('\\textbf{LQR2D Solution: Grid Size = %d, dt = %.3f, Domain [-2,2]$^2$}', gridSize, dt), 'FontSize', 16, 'Interpreter', 'latex');
-
-% === Save figure in high quality ===
-set(gcf, 'Color', 'white');
-exportgraphics(gcf, sprintf('LQR2D_Visualization_Grid%d_dt%.3f.png', gridSize, dt), 'Resolution', 300);
-
-% === Function for exact solution ===
-function V_exact = exactSolution(X1, X2, t, tFinal)
-    % Riccati-based exact solution from backward integration
-    persistent K_sol t_sol
-    if isempty(K_sol)
-        A = [0 1; 0 0];
-        B = [0; 1];
-        Q = eye(2);
-        R = eye(1);
-        P_T = eye(2);  % terminal cost
-        K0 = reshape(P_T, [], 1);
-        opts = odeset('RelTol', 1e-13, 'AbsTol', 1e-13);
-        [t_sol, K_sol] = ode45(@(t, K) ode_gain(t, K, A, B, Q, R), ...
-                               [tFinal:-0.01:0], K0, opts);
+    if ~isempty(phi_errors)
+        l2err_phi = mean(phi_errors);  % Average over test times
+        errors(4, g) = l2err_phi;
+        fprintf('  N=%3d: L2 error = %.3e\n', N, l2err_phi);
+    else
+        fprintf('  N=%3d: No data\n', N);
+        errors(4, g) = NaN;
     end
-    tau = tFinal - t;
-    K_interp = reshape(interp1(t_sol, K_sol, tau, 'pchip'), 2, 2);
-    V_exact = 0.5 * (K_interp(1,1)*X1.^2 + 2*K_interp(1,2)*X1.*X2 + K_interp(2,2)*X2.^2);
+end 
+
+% Calculate L2 errors for each component and grid
+for p = 1:3
+    fprintf('\nComponent P_%d%d:\n', rowMap(p), colMap(p));
+    
+    for g = 1:4
+        N = gridSizes(g);
+        folder = sprintf('./LQR2D_Output/LQR2D_%d/phi/', N);
+        
+        % Numerical extraction (same as plotting section)
+        numP = nan(numel(file_times), 1);
+        [X, Y] = meshgrid(linspace(domain(1), domain(2), N));
+        buf = 3; 
+        idx = buf:N-buf+1;
+        Xs = X(idx, idx);  
+        Ys = Y(idx, idx);
+        Af = [0.5*Xs(:).^2, Xs(:).*Ys(:), 0.5*Ys(:).^2];
+        
+        for k = 1:numel(file_times)
+            f = fullfile(folder, ['phi_t' time_string(file_times(k)) '.dat']);
+            if ~isfile(f), continue; end
+            phi = reshape(load(f), N, N)';
+            phiBlock = phi(idx, idx);
+            coeff = Af \ phiBlock(:);  % rhs as vector
+            numP(k) = coeff(p);
+        end
+        
+        % Analytical curve for this component
+        anaP = squeeze(Pana(rowMap(p), colMap(p), :));
+        
+        % L2 error computation (exact same as plotting)
+        errVec = numP - interp1(tRic, anaP, file_times, 'pchip')';
+        l2err = sqrt(mean(errVec.^2, 'omitnan'));  % Handle NaN values
+        errors(p, g) = l2err;
+        
+        fprintf('  N=%3d: L2 error = %.3e\n', N, l2err);
+    end
 end
 
-function dK = ode_gain(~, K, A, B, Q, R)
-    K_mat = reshape(K, size(A));
-    dK_mat = -(A' * K_mat + K_mat * A - K_mat * B * (R \ B') * K_mat + Q);
-    dK = reshape(dK_mat, [], 1);
+% Calculate convergence orders (log base 2 since we double grid size)
+fprintf('\n=== CONVERGENCE ORDERS ===\n');
+fprintf('Grid    P11     P12     P22     phi\n');
+fprintf('----    ---     ---     ---     ---\n');
+
+for i = 1:3  % 3 transitions: 20→40, 40→80, 80→160
+    orders = zeros(1, 4);
+    for p = 1:4
+        if errors(p,i) > 0 && errors(p,i+1) > 0
+            % Use log base 2 since we double the grid size (halve spacing)
+            orders(p) = log2(errors(p,i)/errors(p,i+1));
+        else
+            orders(p) = NaN;
+        end
+    end
+    fprintf('%d→%d   %.2f    %.2f    %.2f    %.2f\n', ...
+        gridSizes(i), gridSizes(i+1), orders(1), orders(2), orders(3), orders(4));
 end
+
+% Mean convergence orders
+mean_orders = zeros(1, 4);
+for p = 1:4
+    valid_orders = [];
+    for i = 1:3
+        if errors(p,i) > 0 && errors(p,i+1) > 0
+            order = log2(errors(p,i)/errors(p,i+1));
+            valid_orders(end+1) = order;
+        end
+    end
+    if ~isempty(valid_orders)
+        mean_orders(p) = mean(valid_orders);
+    else
+        mean_orders(p) = NaN;
+    end
+end
+
+fprintf('----    ---     ---     ---     ---\n');
+fprintf('Mean    %.2f    %.2f    %.2f    %.2f\n', mean_orders(1), mean_orders(2), mean_orders(3), mean_orders(4));
+
+% Simple convergence plot vs GRID SIZE (not spacing)
+figure('Position', [200, 200, 1000, 600]);
+
+subplot(1,2,1)
+colors = ['r', 'b', 'g', 'm'];
+markers = ['o', 's', 'd', '^'];
+labels = {'P_{11}', 'P_{12}', 'P_{22}', '\phi'};
+
+for p = 1:4
+    valid = ~isnan(errors(p,:));
+    if sum(valid) >= 2
+        loglog(gridSizes(valid), errors(p,valid), [colors(p) markers(p) '-'], ...
+            'LineWidth', 2, 'MarkerSize', 8, 'DisplayName', labels{p});
+        hold on;
+    end
+end
+
+% Reference lines vs grid size N (not spacing h)
+N_ref = logspace(log10(min(gridSizes)), log10(max(gridSizes)), 20);
+ref1 = 1e0 ./ N_ref;        % O(N^{-1}) = O(h^1)  
+ref2 = 1e2 ./ N_ref.^2;     % O(N^{-2}) = O(h^2)
+loglog(N_ref, ref1, 'k:', 'LineWidth', 1.5, 'DisplayName', 'O(N^{-1})');
+loglog(N_ref, ref2, 'k--', 'LineWidth', 1.5, 'DisplayName', 'O(N^{-2})');
+
+xlabel('Grid Size N');
+ylabel('L2 Error');
+title('Convergence vs Grid Size');
+legend('Location', 'northeast');
+grid on;
+
+subplot(1,2,2)
+bar(1:4, mean_orders, 'FaceColor', [0.7 0.7 0.9]);
+hold on;
+yline(2, 'r--', 'LineWidth', 2, 'DisplayName', 'Expected 2nd Order');
+set(gca, 'XTick', 1:4, 'XTickLabel', {'P_{11}', 'P_{12}', 'P_{22}', '\phi'});
+ylabel('Convergence Order');
+title('Mean Convergence Orders');
+grid on;
+ylim([0 3]);
+
+fprintf('\n=== SUMMARY ===\n');
+if all(mean_orders(1:3) >= 1.5 & mean_orders(1:3) <= 2.5)
+    fprintf('✓ Excellent: All P components show ~2nd order convergence\n');
+elseif all(mean_orders(1:3) >= 1.0)
+    fprintf('○ Good: All P components show at least 1st order convergence\n');
+else
+    fprintf('✗ Warning: Some P components show sub-linear convergence\n');
+end
+fprintf('Mean convergence orders: P=[%.2f, %.2f, %.2f], φ=%.2f\n', mean_orders);
+
+% ------------------------------------------------------------------
+% 4.  Helper functions
+% ------------------------------------------------------------------
+function dPdt = riccati_rhs(~,P,A,B,Q,R)
+    Pm = reshape(P,2,2);
+    dPdt = (A.'*Pm + Pm*A - Pm*B*(R\B.')*Pm + Q);
+    dPdt = dPdt(:); 
+end
+
+function str = time_string(t)
+    if abs(t-round(t))<1e-10
+        str = sprintf('%d',round(t));
+    else
+        s = strrep(sprintf('%.1f',t),'.','p');
+        str = s;
+    end
+end
+
+function formatSubplot(gca)
+   % Formats subplot appearance        
+   set(gca, 'TickLabelInterpreter', 'latex', 'XTickLabelRotation', 0);
+   
+   % Set axes properties
+   set(gca, 'FontName', 'Times New Roman', ...
+       'FontSize', 16, 'Box', 'on', 'TickDir', 'out', ...
+       'TickLength', [.02 .02], 'XMinorTick', 'off', ...
+       'YMinorTick', 'on', 'LineWidth', 2);
+end
+

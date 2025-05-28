@@ -102,7 +102,7 @@ double CaslHamiltonJacobi2D<T>::findCFL(const CaslArray2D<double>& un, const dou
             maxAbsH2=max(maxAbsH2, _hamiltonian.maxAbsH2(DxMinLocal, DxMaxLocal, DyMinLocal, DyMaxLocal, i, j, time));}
 
     // return  1.0 / (maxAbsH1 / _grid.dx() + maxAbsH2 / _grid.dy());
-    /* Faranak changed it to the inverse shape to use in CaslSecondOrderDerivative2D class */
+    /* changed to the inverse shape to use in CaslSecondOrderDerivative2D class */
      return (maxAbsH1 / _grid.dx() + maxAbsH2 / _grid.dy());
 }
 
