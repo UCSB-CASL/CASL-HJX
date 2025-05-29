@@ -1,0 +1,356 @@
+/**
+ * @file main.cpp
+ * @brief Reinitialization Equation Solver using CASL-HJX Framework
+ *
+ * MATHEMATICAL MODEL:
+ * ∂φ/∂t + H(φ, ∇φ) = 0 with H(φ, ∇φ) = sgn(φ)|∇φ|² − 1
+ *
+ * Where:
+ * - φ(x,y,t) is the transported scalar field
+ * - Domain: [-2, 2] × [-2, 2] with linear extrapolation
+ * - Initial condition: φ(x,y,0) = 5(x² + y² − 0.25)
+ *
+ * NUMERICAL METHODS:
+ * - Spatial discretization: WENO5 (Weighted Essentially Non-Oscillatory, 5th order)
+ * - Time integration: TVD-RK3 (Total Variation Diminishing Runge-Kutta, 3rd order)
+ * - Boundary conditions: Linear Extrapolation
+ * - Time Step: dt ≤ min(Δx, Δy)
+ *
+ * PHYSICAL SIGNIFICANCE:
+ * The Reinitialization Equation allows reinitialization of a level-set 
+ * surface while maintaining the zero contour.
+ *
+ * OUTPUT FORMAT:
+ * - phi_t*.dat: Scalar field φ at different time instances
+ * - ASCII format suitable for MATLAB/Python visualization
+ *
+ * @author Andrew Wang
+ * @date 2024-11-14
+ * @version 2.0 - Professional version with comprehensive documentation and output
+ *
+ * USAGE:
+ * 1. Compile: mkdir build && cd build && cmake .. && make
+ * 2. Run: ./projectReinitialization
+ * 3. Results: Check __Output/ folder for phi_t*.dat files
+ * 4. Visualize: Use MATLAB/Python scripts to create animations
+ *
+ * DEPENDENCIES:
+ * - CASL-HJX Common Library (CaslGrid2D, CaslArray2D, etc.)
+ * - C++11 or later
+ * - CMake build system
+ */
+
+#include <cmath>
+#include <iostream>
+#include <fstream>
+#include <iomanip>
+#include <string>
+#include <unistd.h>
+#include <sys/stat.h>
+
+// CASL-HJX Core Libraries
+#include "../../CASLCommonLibrary/CaslGrid2D.h"
+#include "../../CASLCommonLibrary/CaslArray2D.h"
+#include "../../CASLCommonLibrary/CaslHamiltonJacobi2D.h"
+#include "../../CASLCommonLibrary/CaslCppToMATLAB2D.h"
+#include "../../CASLCommonLibrary/CaslHamiltonian2D.h"
+#include "../../CASLCommonLibrary/CaslSecondOrderDerivative2D_1D.h"
+#include "../../CASLCommonLibrary/DPMatrix2D.h"
+
+// Project-Specific Library
+#include "projectReinitialization_lib/CaslHamiltonianReinitialization2D.h"
+
+using namespace std;
+
+/**
+ * @brief Creates output directory with proper error handling
+ * @param dirPath Path to the directory to create
+ * @return true if directory exists or was created successfully
+ */
+bool createOutputDirectory(const string& dirPath) {
+    struct stat st = {0};
+    if (stat(dirPath.c_str(), &st) == -1) {
+        #ifdef _WIN32
+            return _mkdir(dirPath.c_str()) == 0;
+        #else
+            return mkdir(dirPath.c_str(), 0755) == 0;
+        #endif
+    }
+    return true; // Directory already exists
+}
+
+/**
+ * @brief Generates timestep filename with proper formatting
+ * @param outputDir Base output directory path
+ * @param timeStep Current time step number
+ * @param currentTime Current simulation time
+ * @return Formatted filename string
+ */
+string generateFilename(const string& outputDir, int timeStep, double currentTime) {
+    string filename = outputDir + "/phi_t";
+    if (timeStep == 0) {
+        filename += "0.dat";
+    } else {
+        // Format time as t1p234 for t=1.234 (replace decimal with 'p')
+        string timeStr = to_string(currentTime);
+        size_t dotPos = timeStr.find('.');
+        if (dotPos != string::npos) {
+            timeStr[dotPos] = 'p';
+        }
+        // Remove trailing zeros
+        timeStr.erase(timeStr.find_last_not_of('0') + 1, string::npos);
+        if (timeStr.back() == 'p') timeStr.pop_back();
+
+        filename += timeStr + ".dat";
+    }
+    return filename;
+}
+
+/**
+ * @brief Main solver routine for reinitialization equation
+ *
+ * Implements the complete solution pipeline:
+ * 1. Grid and domain setup
+ * 2. Initial condition specification
+ * 3. Velocity field definition
+ * 4. Numerical solver configuration
+ * 5. Time marching with TVD-RK3
+ * 6. Data export
+ *
+ * @return EXIT_SUCCESS on successful completion
+ */
+int main()
+{
+    // ====================================================================
+    // SECTION 1: SIMULATION PARAMETERS AND DOMAIN SETUP
+    // ====================================================================
+
+    cout << "CASL-HJX: Reinitialization Equation Solver" << endl;
+    cout << "==========================================" << endl;
+    cout << "Mathematical Model: ∂φ/∂t + vₙ|∇φ| = 0" << endl;
+    cout << "Numerical Methods: WENO5 + TVD-RK3 + Linear Extrapolation" << endl;
+
+    // Physical domain: [-2, 2] × [-2, 2] 
+    const double xMin = -2.0, xMax = 2.0;
+    const double yMin = -2.0, yMax = 2.0;
+    const int nX = 250, nY = 250;  // Grid resolution (250×250 = 62500 points)
+
+    // Temporal domain
+    const double tInitial = 0.0, tFinal = 1.0;
+    const int nOutput = 50;  // Export frequency (20 ms intervals)
+
+    cout << "Domain: [" << xMin << ", " << xMax << "] × [" << yMin << ", " << yMax << "]" << endl;
+    cout << "Grid: " << nX << "×" << nY << " points" << endl;
+    cout << "Time: t ∈ [" << tInitial << ", " << tFinal << "]" << endl;
+
+    // ====================================================================
+    // SECTION 2: DIRECTORY DETECTION AND OUTPUT SETUP
+    // ====================================================================
+
+    // Smart directory detection for cross-platform compatibility
+    char cwd[1024];
+    string outputDir;
+
+    if (getcwd(cwd, sizeof(cwd)) != NULL) {
+        cout << "Current working directory: " << cwd << endl;
+
+        string currentPath(cwd);
+        if (currentPath.find("cmake-build-release") != string::npos) {
+            cout << "Build environment: CMake build directory detected" << endl;
+            outputDir = "../../../CASLProjects/projectReinitialization/__Output";
+        } else if (currentPath.find("build") != string::npos) {
+            cout << "Build environment: Standard build directory" << endl;
+            outputDir = "../__Output";
+        } else {
+            cout << "Build environment: Source directory" << endl;
+            outputDir = "__Output";
+        }
+    } else {
+        cout << "Build environment: Default (source directory assumed)" << endl;
+        outputDir = "__Output";
+    }
+
+    cout << "Output directory: " << outputDir << endl;
+
+    // Create output directory structure
+    if (createOutputDirectory(outputDir)) {
+        cout << "Output directory ready: " << outputDir << endl;
+    } else {
+        cerr << "Error: Could not create output directory: " << outputDir << endl;
+        return EXIT_FAILURE;
+    }
+
+    // ====================================================================
+    // SECTION 3: GRID INITIALIZATION AND ARRAY ALLOCATION
+    // ====================================================================
+
+    CaslGrid2D grid(xMin, xMax, yMin, yMax, nX, nY);
+    double dx = grid.dx(), dy = grid.dy();
+
+    cout << "Grid spacing: dx = " << dx << ", dy = " << dy << endl;
+
+    // Padding for high-order WENO5 scheme (requires 3 ghost points)
+    const int nPads = 3;
+
+    // Solution arrays for TVD-RK3 time stepping
+    CaslArray2D<double> phiN(nX, nY, nPads);      // Current solution φⁿ
+    CaslArray2D<double> phiNp1(nX, nY, nPads);    // Intermediate solution φⁿ⁺¹
+    CaslArray2D<double> phiNp2(nX, nY, nPads);    // Second RK stage
+    CaslArray2D<double> phiNp12(nX, nY, nPads);   // Half-step combination
+    CaslArray2D<double> phiNp32(nX, nY, nPads);   // Three-halves step
+
+    // ====================================================================
+    // SECTION 4: INITIAL CONDITIONS AND SIGN FUNCTION
+    // ====================================================================
+
+    // Set initial condition: φ(x,y,0) = 5(x² + y² − 0.25)
+    // This gives a level set that changes over time
+    for (int i = 1; i <= nX; ++i) {
+        for (int j = 1; j <= nY; ++j) {
+            phiN(i, j) = 5 * (grid.x(i) * grid.x(i) + grid.y(j) * grid.y(j) - 0.25);
+        }
+    }
+
+    cout << "φ(x,y,0) = 5(x² + y² - 0.25)" << endl;
+
+    // Sign function for the hamiltonian
+    CaslArray2D<double> signPhi0(nX, nY);
+    for (int i = 1; i <= nX; ++i) for (int j = 1; j <= nY; ++j) {
+            if (phiN(i, j) == 0) signPhi0(i, j) = 0;
+            else signPhi0(i,j) = (phiN(i, j) > 0) ? 1 : -1;
+        }
+
+    // ====================================================================
+    // SECTION 5: NUMERICAL SOLVER CONFIGURATION
+    // ====================================================================
+
+    // Configure Hamiltonian for reinitialization
+    CaslHamiltonianReinitialization2D hamiltonian(grid, signPhi0);
+
+    // Numerical method selections
+    CaslOptionPaddingWith boundaryConditions = withLinearExtrapolation;
+    CaslOptionNumericalFirstDerivative firstDerivativeScheme = WENO5;
+
+    // Limited time step for numerical stability
+    // min(Δx, Δy) ≤ 0.4 (safety factor)
+    double dt = 0.4 * min(dx, dy);
+
+    cout << "Time step: dt = " << scientific << setprecision(3) << dt << endl;
+
+    // Initialize Hamilton-Jacobi solver
+    double currentTime = tInitial;
+    CaslHamiltonJacobi2D<double> HJSolver(grid, hamiltonian, dt, currentTime,
+                                         firstDerivativeScheme);
+
+    // ====================================================================
+    // SECTION 6: DATA EXPORT INITIALIZATION
+    // ====================================================================
+
+    CaslCppToMATLAB2D cppToMatlab;
+
+    // Export initial condition
+    string initialFile = generateFilename(outputDir, 0, currentTime);
+    cout << "Exporting initial condition: " << initialFile << endl;
+    cppToMatlab.exportDataToMatlab(grid, phiN, initialFile);
+
+    // Setup for time-based exports
+    double saveIncrement = tFinal / static_cast<double>(nOutput);
+    double nextOutputTime = saveIncrement;
+    int fileIndex = 1;
+
+    cout << "Export frequency: every " << saveIncrement << " time units" << endl;
+    cout << "Starting time integration..." << endl;
+
+    // ====================================================================
+    // SECTION 7: MAIN TIME INTEGRATION LOOP (TVD-RK3)
+    // ====================================================================
+
+    /**
+     * Third-order Total Variation Diminishing Runge-Kutta scheme:
+     *
+     * Stage 1: φ⁽¹⁾ = φⁿ + Δt L(φⁿ)
+     * Stage 2: φ⁽²⁾ = φ⁽¹⁾ + Δt L(φ⁽¹⁾)
+     * Stage 3: φ̃ = (3/4)φⁿ + (1/4)φ⁽²⁾
+     * Stage 4: φ⁽³⁾ = φ̃ + Δt L(φ̃)
+     * Final:   φⁿ⁺¹ = (1/3)φⁿ + (2/3)φ⁽³⁾
+     *
+     * Where L(φ) = 1 - sgn(φ)|∇φ|² (reinitialization operator)
+     */
+
+    double originalDt = dt;
+    bool shouldExport = false;
+    int stepCount = 0;
+
+    while (currentTime < tFinal) {
+        // Adaptive time step near output times and final time
+        if (currentTime + dt >= nextOutputTime || currentTime + dt >= tFinal) {
+            dt = min(nextOutputTime - currentTime, tFinal - currentTime);
+            shouldExport = true;
+        }
+
+        // TVD-RK3 Stage 1: Forward Euler step
+        phiN.fillPaddingPoints(boundaryConditions);
+        HJSolver.eulerStep(phiN, phiNp1);
+
+        // TVD-RK3 Stage 2: Second Euler step
+        phiNp1.fillPaddingPoints(boundaryConditions);
+        HJSolver.eulerStep(phiNp1, phiNp2);
+
+        // TVD-RK3 Stage 3: Convex combination
+        phiNp12 = 0.75 * phiN + 0.25 * phiNp2;
+
+        // TVD-RK3 Stage 4: Third Euler step
+        phiNp12.fillPaddingPoints(boundaryConditions);
+        HJSolver.eulerStep(phiNp12, phiNp32);
+
+        // TVD-RK3 Final: Second convex combination
+        phiNp1 = (1.0/3.0) * phiN + (2.0/3.0) * phiNp32;
+
+        // Update solution and time
+        currentTime += dt;
+        phiN = phiNp1;
+        stepCount++;
+
+        // Progress reporting (every 10 steps or at export times)
+        if (stepCount % 10 == 0 || shouldExport) {
+            cout << "t = " << fixed << setprecision(3) << currentTime
+                 << " (step " << stepCount << ")" << endl;
+        }
+
+        // Export data at specified intervals
+        if (shouldExport) {
+            string filename = generateFilename(outputDir, fileIndex, currentTime);
+            cout << "Exporting solution: " << filename << endl;
+            cppToMatlab.exportDataToMatlab(grid, phiN, filename);
+
+            fileIndex++;
+            nextOutputTime += saveIncrement;
+            shouldExport = false;
+            dt = originalDt;  // Restore original time step
+        }
+    }
+
+    // ====================================================================
+    // SECTION 8: RESULTS SUMMARY AND OUTPUT
+    // ====================================================================
+
+    cout << "\nSimulation completed successfully!" << endl;
+    cout << "=================================" << endl;
+    cout << "Grid resolution: " << nX << "×" << nY << " points" << endl;
+    cout << "Total time steps: " << stepCount << endl;
+    cout << "Final time: " << fixed << setprecision(6) << currentTime << endl;
+    cout << "Files exported: " << fileIndex << " snapshots" << endl;
+    cout << "\nResults exported to: " << outputDir << endl;
+
+    // Verify file creation
+    cout << "\nCreated files:" << endl;
+    string listCommand = "ls -la " + outputDir + "/";
+    int result = system(listCommand.c_str());
+
+    if (result != 0) {
+        cout << "Note: Could not list output files (ls command failed)" << endl;
+        cout << "Please check the output directory manually: " << outputDir << endl;
+    }
+
+    return EXIT_SUCCESS;
+}
