@@ -264,9 +264,9 @@ function createEvolutionAnimation(X, Y, phi_data, times, saveDir)
         cb1.Label.Interpreter = 'latex';
         cb1.Label.FontSize = 12;
         
-        xlabel('$x$', 'FontSize', 14, 'Interpreter', 'latex');
-        ylabel('$y$', 'FontSize', 14, 'Interpreter', 'latex');
-        title(sprintf('$t = %.3f$', times(i)), 'FontSize', 12, 'Interpreter', 'latex');
+        xlabel('$x$', 'FontSize', 18, 'Interpreter', 'latex');
+        ylabel('$y$', 'FontSize', 18, 'Interpreter', 'latex');
+        title(sprintf('$t = %.3f$', times(i)), 'FontSize', 18, 'Interpreter', 'latex');
         axis equal;
         xlim([min(X(:)), max(X(:))]);
         ylim([min(Y(:)), max(Y(:))]);
@@ -274,7 +274,7 @@ function createEvolutionAnimation(X, Y, phi_data, times, saveDir)
         % Professional tick formatting
         xticks(-2:1:2);
         yticks(-2:1:2);
-        set(gca, 'TickLabelInterpreter', 'latex', 'FontSize', 11);
+        set(gca, 'TickLabelInterpreter', 'latex', 'FontSize', 18);
         set(gca, 'LineWidth', 1, 'Box', 'on');
         grid off; % Remove grid
         
@@ -289,10 +289,10 @@ function createEvolutionAnimation(X, Y, phi_data, times, saveDir)
         cb2.Label.Interpreter = 'latex';
         cb2.Label.FontSize = 12;
         
-        xlabel('$x$', 'FontSize', 14, 'Interpreter', 'latex');
-        ylabel('$y$', 'FontSize', 14, 'Interpreter', 'latex');
-        zlabel('$\phi(x,y,t)$', 'FontSize', 14, 'Interpreter', 'latex');
-        title(sprintf('$t = %.3f$', times(i)), 'FontSize', 12, 'Interpreter', 'latex');
+        xlabel('$x$', 'FontSize', 18, 'Interpreter', 'latex');
+        ylabel('$y$', 'FontSize', 18, 'Interpreter', 'latex');
+        zlabel('$\phi(x,y,t)$', 'FontSize', 18, 'Interpreter', 'latex');
+        title(sprintf('$t = %.3f$', times(i)), 'FontSize', 18, 'Interpreter', 'latex');
         view(45, 30);
         
         % Consistent z-limits
@@ -305,13 +305,13 @@ function createEvolutionAnimation(X, Y, phi_data, times, saveDir)
         % Professional 3D formatting
         xticks(-2:1:2);
         yticks(-2:1:2);
-        set(gca, 'TickLabelInterpreter', 'latex', 'FontSize', 11);
+        set(gca, 'TickLabelInterpreter', 'latex', 'FontSize', 18);
         set(gca, 'LineWidth', 1, 'Box', 'on');
         grid off; % Remove grid
         
         % Overall title
         sgtitle('Normal Advection: $\frac{\partial\phi}{\partial t} + v_n|\nabla\phi| = 0$', ...
-               'FontSize', 16, 'Interpreter', 'latex', 'FontWeight', 'bold');
+               'FontSize', 18, 'Interpreter', 'latex', 'FontWeight', 'bold');
         
         drawnow;
         
