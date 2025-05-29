@@ -159,14 +159,14 @@ for k = 1:length(hero_times)
     colormap(ax1, parula);
     shading(ax1, 'interp');
     axis(ax1, [domain(1) domain(2) domain(1) domain(2) z_min_global z_max_global]);
-    xlabel(ax1, '$x_1$', 'FontSize', 13, 'FontWeight', 'bold');
-    ylabel(ax1, '$x_2$', 'FontSize', 13, 'FontWeight', 'bold');
-    zlabel(ax1, '$V(x,t)$', 'FontSize', 13, 'FontWeight', 'bold');
-    title(ax1, sprintf('Cost-to-Go Surface: $t = %.1f$ s', t), 'FontSize', 14, 'FontWeight', 'bold');
+    xlabel(ax1, '$x_1$', 'FontSize', 18, 'FontWeight', 'bold');
+    ylabel(ax1, '$x_2$', 'FontSize', 18, 'FontWeight', 'bold');
+    zlabel(ax1, '$V(x,t)$', 'FontSize', 18, 'FontWeight', 'bold');
+    title(ax1, sprintf('Cost-to-Go Surface: $t = %.1f$ s', t), 'FontSize', 18, 'FontWeight', 'bold');
     grid(ax1, 'off');
     
     % Professional axis styling
-    set(ax1, 'FontSize', 11, 'LineWidth', 1.2);
+    set(ax1, 'FontSize', 18, 'LineWidth', 1.2);
     set(ax1, 'XMinorTick', 'on', 'YMinorTick', 'on', 'ZMinorTick', 'on');
     set(ax1, 'TickLength', [0.01 0.025]);
     
@@ -195,13 +195,13 @@ for k = 1:length(hero_times)
     
     axis(ax2, 'equal', 'tight');
     xlim(ax2, domain(1:2)); ylim(ax2, domain(3:4));
-    xlabel(ax2, '$x_1$', 'FontSize', 13, 'FontWeight', 'bold');
-    ylabel(ax2, '$x_2$', 'FontSize', 13, 'FontWeight', 'bold');
-    title(ax2, 'Phase Space Trajectories', 'FontSize', 14, 'FontWeight', 'bold');
+    xlabel(ax2, '$x_1$', 'FontSize', 18, 'FontWeight', 'bold');
+    ylabel(ax2, '$x_2$', 'FontSize', 18, 'FontWeight', 'bold');
+    title(ax2, 'Phase Space Trajectories', 'FontSize', 18, 'FontWeight', 'bold');
     grid(ax2, 'on'); grid(ax2, 'minor');
     
     % Professional axis styling
-    set(ax2, 'FontSize', 11, 'LineWidth', 1.2);
+    set(ax2, 'FontSize', 18, 'LineWidth', 1.2);
     set(ax2, 'XMinorTick', 'on', 'YMinorTick', 'on');
     set(ax2, 'TickLength', [0.01 0.025]);
     set(ax2, 'GridAlpha', 0.3, 'MinorGridAlpha', 0.15);
@@ -226,13 +226,13 @@ for k = 1:length(hero_times)
     
     xlim(ax3, [0 10]);
     ylim(ax3, [u_min_global u_max_global]);
-    xlabel(ax3, 'Time (s)', 'FontSize', 13, 'FontWeight', 'bold');
-    ylabel(ax3, 'Control $u^*(t)$', 'FontSize', 13, 'FontWeight', 'bold');
-    title(ax3, 'Optimal Control Signals', 'FontSize', 14, 'FontWeight', 'bold');
+    xlabel(ax3, 'Time (s)', 'FontSize', 18, 'FontWeight', 'bold');
+    ylabel(ax3, 'Control $u^*(t)$', 'FontSize', 18, 'FontWeight', 'bold');
+    title(ax3, 'Optimal Control Signals', 'FontSize', 18, 'FontWeight', 'bold');
     grid(ax3, 'on'); grid(ax3, 'minor');
     
     % Professional axis styling
-    set(ax3, 'FontSize', 11, 'LineWidth', 1.2);
+    set(ax3, 'FontSize', 18, 'LineWidth', 1.2);
     set(ax3, 'XMinorTick', 'on', 'YMinorTick', 'on');
     set(ax3, 'TickLength', [0.01 0.025]);
     set(ax3, 'GridAlpha', 0.3, 'MinorGridAlpha', 0.15);
@@ -272,13 +272,13 @@ for k = 1:length(hero_times)
     end
     
     xlim(ax4, [0 10]);
-    xlabel(ax4, 'Time (s)', 'FontSize', 13, 'FontWeight', 'bold');
-    ylabel(ax4, 'Matrix Components', 'FontSize', 13, 'FontWeight', 'bold');
-    title(ax4, 'Riccati Matrix $P(t)$ Evolution', 'FontSize', 14, 'FontWeight', 'bold');
+    xlabel(ax4, 'Time (s)', 'FontSize', 18, 'FontWeight', 'bold');
+    ylabel(ax4, 'Matrix Components', 'FontSize', 18, 'FontWeight', 'bold');
+    title(ax4, 'Riccati Matrix $P(t)$ Evolution', 'FontSize', 18, 'FontWeight', 'bold');
     grid(ax4, 'on'); grid(ax4, 'minor');
     
     % Professional axis styling
-    set(ax4, 'FontSize', 11, 'LineWidth', 1.2);
+    set(ax4, 'FontSize', 18, 'LineWidth', 1.2);
     set(ax4, 'XMinorTick', 'on', 'YMinorTick', 'on');
     set(ax4, 'TickLength', [0.01 0.025]);
     set(ax4, 'GridAlpha', 0.3, 'MinorGridAlpha', 0.15);
@@ -286,8 +286,8 @@ for k = 1:length(hero_times)
     legend(ax4, 'Location', 'best', 'FontSize', 10);
     
     % Overall title
-    sgtitle(fig1, sprintf('CASL-HJX LQR Solver: Complete Analysis at $t = %.1f$ s', t), ...
-            'FontSize', 18, 'FontWeight', 'bold');
+    sgtitle(fig1, sprintf('LQR Solution at $t = %.1f$ s', t), ...
+            'FontSize', 24, 'FontWeight', 'bold');
     
     drawnow;
     
