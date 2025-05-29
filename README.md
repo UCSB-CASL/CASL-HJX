@@ -9,7 +9,7 @@
 
 ---
 <p align="center">
-  <img src="CASLProjects/projectLQR2D/Results/lqr_hero_professional.gif" alt="LQR Solver Demo" width="1100"/>
+  <img src="CASLProjects/projectLQR2D/Results/lqr_hero_professional.gif" alt="LQR Solver Demo" width="2000"/>
 </p>
 <p align="center"><i>Evolution of the cost-to-go function \( V(x,t) \) in a 2D LQR setup.</i></p>
 
