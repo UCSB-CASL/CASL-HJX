@@ -8,6 +8,15 @@
 [![OpenMP](https://img.shields.io/badge/OpenMP-4.0%2B-orange.svg)](https://www.openmp.org/)
 
 ---
+<p align="center">
+  <img src="CASLProjects/projectLQR2D/results/lqr_solver_demo.gif" alt="LQR Solver Demo" width="600"/>
+</p>
+<p align="center"><i>Evolution of the cost-to-go function \( V(x,t) \) in a 2D LQR setup.</i></p>
+
+<p align="center">
+  <img src="CASLProjects/projectLQR2D/results/lqr_validation_compact.gif" alt="LQR Validation" width="600"/>
+</p>
+<p align="center"><i>Numerical vs analytical Riccati comparison: convergence with < \(10^{-4}\) error.</i></p>
 
 ## Research Institution
 
