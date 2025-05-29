@@ -184,7 +184,7 @@ for k = 1:numel(snapTimes)
     formatSubplot(gca)
 end
 % sgtitle('$N=160$ snapshots: numerical (top) vs analytical (bottom)','Interpreter','latex');
-exportgraphics(fig2,'cost_snapshots.pdf', ...
+exportgraphics(fig,'cost_snapshots.pdf', ...
               'ContentType','vector', ...     % keep vectors
               'Resolution',150, ...           % lower DPI
               'BackgroundColor','none');      % transparent

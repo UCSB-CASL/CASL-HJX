@@ -1,261 +1,323 @@
-%% LQR Professional GIF Creator
-% Run this from the projectLQR2D directory
+%% GitHub-Optimized LQR2D GIF Creator
+%  Creates smaller, web-optimized GIFs perfect for GitHub README
 
 clear; close all; clc;
 
-fprintf('🎬 Creating Professional LQR Visualizations...\n');
+fprintf('🚀 Creating GitHub-optimized GIFs for LQR2D solver...\n\n');
 
-%% Configuration
-gridSize = 160;  % Use your 160x160 data
-domain = [-4 4 -4 4];  % Your domain
-folder = sprintf('./LQR2D_Output/LQR2D_%d/phi/', gridSize);
+% Configuration for GitHub optimization
+domain = [-4 4 -4 4];
+N = 80;  % Reduced resolution for smaller file size
+folder = sprintf('./LQR2D_Output/LQR2D_%d/phi/', N);
 
-% Check if data exists
-if ~isfolder(folder)
-    error('Data folder not found: %s\nMake sure you run this from projectLQR2D directory', folder);
+% Fallback to 160 if 80 doesn't exist
+if ~exist(folder, 'dir')
+    N = 160;
+    folder = sprintf('./LQR2D_Output/LQR2D_%d/phi/', N);
 end
 
-% Find available time files
-files = dir(fullfile(folder, 'phi_t*.dat'));
-if isempty(files)
-    error('No phi_t*.dat files found in %s', folder);
+if ~exist(folder, 'dir')
+    error('No LQR2D data found. Please run the solver first with N=80 or N=160.');
 end
 
-fprintf('Found %d data files\n', length(files));
+fprintf('📊 Using data from: %s\n', folder);
 
-%% Extract time points and sort
-times = [];
-filenames = {};
-for i = 1:length(files)
-    name = files(i).name;
-    % Extract time from filename (e.g., phi_t2p5.dat -> 2.5)
-    time_str = extractBetween(name, 'phi_t', '.dat');
-    if ~isempty(time_str)
-        time_str = strrep(time_str{1}, 'p', '.');
-        times(end+1) = str2double(time_str);
-        filenames{end+1} = name;
-    end
-end
+% Optimized time points (fewer frames = smaller file)
+gif_times = [0 0.2 0.5 1.0 2.0 3.0 5.0 8.0 10.0];
+[X, Y] = meshgrid(linspace(domain(1), domain(2), N));
 
-% Sort by time
-[times, idx] = sort(times);
-filenames = filenames(idx);
+% Analytical reference
+A = [0 1; 0 0]; B = [0; 1]; Q = eye(2); R = 1;
+eye_2 = eye(2); 
+[tRic, Pvec] = ode45(@(t,P) riccati_rhs(t,P,A,B,Q,R), [0 10], eye_2(:));
 
-% Select time points for smooth animation (max 10 frames)
-if length(times) > 10
-    step = floor(length(times) / 10);
-    selected_idx = 1:step:length(times);
-    if selected_idx(end) ~= length(times)
-        selected_idx(end+1) = length(times);
-    end
-    times = times(selected_idx);
-    filenames = filenames(selected_idx);
-end
+%% ========================================================================
+%% HERO GIF: Surface Evolution (Main README showcase)
+%% ========================================================================
 
-fprintf('Using %d time points: [', length(times));
-fprintf('%.1f ', times);
-fprintf(']\n');
+fprintf('🎬 Creating HERO surface evolution GIF...\n');
 
-%% Setup grid
-[X, Y] = meshgrid(linspace(domain(1), domain(2), gridSize));
+% Optimized figure size for web
+fig = figure('Position', [100 100 600 450], 'Color', 'white', 'MenuBar', 'none');
+set(fig, 'InvertHardcopy', 'off');
 
-%% Create Hero GIF - 3D Surface Evolution
-fprintf('Creating hero surface animation...\n');
-create_surface_gif();
+ax = axes('Position', [0.1 0.15 0.8 0.75]);
 
-%% Create Contour GIF - 2D Evolution  
-fprintf('Creating contour evolution...\n');
-create_contour_gif();
+filename = 'lqr_solver_demo.gif';
+delay = 0.5;  % Longer delay for readability
 
-%% Create Comparison GIF - Numerical vs Analytical
-fprintf('Creating validation comparison...\n');
-create_comparison_gif();
-
-fprintf('\n✅ All GIFs created successfully!\n');
-fprintf('📁 Files created:\n');
-fprintf('   • lqr_hero_3d.gif (Main showcase - 3D surface)\n');
-fprintf('   • lqr_contour.gif (2D contour evolution)\n');
-fprintf('   • lqr_validation.gif (Numerical vs Analytical)\n\n');
-fprintf('💡 Use lqr_hero_3d.gif as your main README animation\n');
-
-%% FUNCTION DEFINITIONS
-
-function create_surface_gif()
-    fig = figure('Position', [100 100 800 600], 'Color', 'k');
-    filename = 'lqr_hero_3d.gif';
+for k = 1:length(gif_times)
+    t = gif_times(k);
     
-    % Find z-limits for consistent scaling
-    z_max = 0;
-    for k = 1:length(times)
-        phi_temp = load_phi_data(k);
-        z_max = max(z_max, max(phi_temp(:)));
+    fname = fullfile(folder, ['phi_t' time_string(t) '.dat']);
+    if ~isfile(fname), continue; end
+    
+    phi = reshape(load(fname), N, N)';
+    
+    % Clean, professional 3D plot
+    cla(ax);
+    surf(ax, X, Y, phi, 'EdgeColor', 'none', 'FaceAlpha', 0.95);
+    
+    view(ax, [45 30]);
+    colormap(ax, parula);
+    shading(ax, 'interp');
+    
+    % Consistent limits for smooth animation
+    axis(ax, [domain(1) domain(2) domain(1) domain(2) 0 20]);
+    
+    % Clean labeling
+    xlabel(ax, 'x₁', 'FontSize', 12, 'FontWeight', 'bold');
+    ylabel(ax, 'x₂', 'FontSize', 12, 'FontWeight', 'bold');
+    zlabel(ax, 'Cost V(x,t)', 'FontSize', 12, 'FontWeight', 'bold');
+    
+    title(ax, sprintf('LQR Cost-to-Go: t = %.1f', t), ...
+          'FontSize', 14, 'FontWeight', 'bold');
+    
+    % Subtle grid
+    grid(ax, 'on');
+    set(ax, 'GridAlpha', 0.3, 'FontSize', 10);
+    
+    drawnow;
+    
+    % Capture and compress
+    frame = getframe(fig);
+    im = frame2im(frame);
+    [imind, cm] = rgb2ind(im, 128);  % Reduced colors for smaller size
+    
+    if k == 1
+        imwrite(imind, cm, filename, 'gif', 'Loopcount', inf, 'DelayTime', delay);
+    else
+        imwrite(imind, cm, filename, 'gif', 'WriteMode', 'append', 'DelayTime', delay);
     end
     
-    for k = 1:length(times)
-        t = times(k);
-        phi = load_phi_data(k);
-        
-        clf;
-        h = surf(X, Y, phi, 'EdgeColor', 'none', 'FaceAlpha', 0.9);
-        
-        % Professional styling
-        view([45 35]);
-        colormap(parula);
-        shading interp;
-        
-        % Lighting for premium look
-        lighting gouraud;
-        light('Position', [1 1 1], 'Style', 'local');
-        light('Position', [-1 -1 0.5], 'Style', 'local', 'Color', [0.3 0.3 0.4]);
-        
-        % Modern typography
-        title(sprintf('Hamilton-Jacobi-Bellman Solver: t = %.1f', t), ...
-              'FontSize', 20, 'FontWeight', 'bold', 'Color', 'w');
-        xlabel('State x₁', 'FontSize', 14, 'Color', 'w', 'FontWeight', 'bold');
-        ylabel('State x₂', 'FontSize', 14, 'Color', 'w', 'FontWeight', 'bold');
-        zlabel('Cost-to-Go V(x,t)', 'FontSize', 14, 'Color', 'w', 'FontWeight', 'bold');
-        
-        % Consistent limits
-        xlim(domain(1:2)); ylim(domain(3:4)); zlim([0 z_max*1.1]);
-        set(gca, 'Color', 'k', 'XColor', 'w', 'YColor', 'w', 'ZColor', 'w', ...
-                'FontSize', 12, 'LineWidth', 1.5);
-        
-        % Branding
-        text(0.02, 0.95, 'CASL-HJX Framework', 'Units', 'normalized', ...
-             'FontSize', 12, 'Color', [0.7 0.7 0.7], 'FontWeight', 'bold');
-        
-        % Capture frame
-        drawnow;
-        frame = getframe(gcf);
-        [imind, cm] = rgb2ind(frame.cdata, 256);
-        
-        if k == 1
-            imwrite(imind, cm, filename, 'gif', 'Loopcount', inf, ...
-                    'DelayTime', 0.8, 'Disposal', 'restoreBG');
-        else
-            imwrite(imind, cm, filename, 'gif', 'WriteMode', 'append', ...
-                    'DelayTime', 0.8, 'Disposal', 'restoreBG');
+    fprintf('  ✓ Frame %d/%d (t=%.1f)\n', k, length(gif_times), t);
+end
+
+close(fig);
+fprintf('✅ Main demo GIF: %s\n\n', filename);
+
+%% ========================================================================
+%% VALIDATION GIF: Numerical vs Analytical (Compact comparison)
+%% ========================================================================
+
+fprintf('📈 Creating validation comparison GIF...\n');
+
+fig = figure('Position', [150 150 800 400], 'Color', 'white');
+
+filename_val = 'lqr_validation_compact.gif';
+comparison_times = [0 1.0 3.0 5.0 10.0];  % Key moments only
+
+for k = 1:length(comparison_times)
+    t = comparison_times(k);
+    
+    fname = fullfile(folder, ['phi_t' time_string(t) '.dat']);
+    if ~isfile(fname), continue; end
+    
+    phi_num = reshape(load(fname), N, N)';
+    
+    % Analytical solution
+    if abs(t) < 1e-10
+        P_t = eye(2);
+    else
+        P_t = reshape(interp1(tRic, Pvec, t, 'pchip'), 2, 2);
+    end
+    phi_ana = 0.5 * (P_t(1,1)*X.^2 + 2*P_t(1,2)*X.*Y + P_t(2,2)*Y.^2);
+    
+    % Side-by-side comparison
+    clf;
+    
+    subplot(1,2,1);
+    contourf(X, Y, phi_num, 20, 'LineColor', 'none');
+    colormap(parula); axis equal tight;
+    title(sprintf('Numerical t=%.1f', t), 'FontSize', 12, 'FontWeight', 'bold');
+    xlabel('x₁'); ylabel('x₂');
+    
+    subplot(1,2,2);
+    contourf(X, Y, phi_ana, 20, 'LineColor', 'none');
+    colormap(parula); axis equal tight;
+    title(sprintf('Analytical t=%.1f', t), 'FontSize', 12, 'FontWeight', 'bold');
+    xlabel('x₁'); ylabel('x₂');
+    
+    % Error metric
+    max_error = max(abs(phi_num(:) - phi_ana(:)));
+    sgtitle(sprintf('CASL-HJX Validation | Max Error: %.2e', max_error), ...
+            'FontSize', 14, 'FontWeight', 'bold');
+    
+    drawnow;
+    
+    frame = getframe(fig);
+    im = frame2im(frame);
+    [imind, cm] = rgb2ind(im, 128);
+    
+    if k == 1
+        imwrite(imind, cm, filename_val, 'gif', 'Loopcount', inf, 'DelayTime', 1.0);
+    else
+        imwrite(imind, cm, filename_val, 'gif', 'WriteMode', 'append', 'DelayTime', 1.0);
+    end
+    
+    fprintf('  ✓ Frame %d/%d (t=%.1f)\n', k, length(comparison_times), t);
+end
+
+close(fig);
+fprintf('✅ Validation GIF: %s\n\n', filename_val);
+
+%% ========================================================================
+%% CAPABILITIES GIF: Multi-solver showcase (if other projects exist)
+%% ========================================================================
+
+fprintf('🔧 Creating capabilities showcase...\n');
+
+% Check for other project outputs
+projects = {'Advection', 'Burgers', 'AdvectionDiffusion', 'Diffusion'};
+capabilities_data = {};
+
+for i = 1:length(projects)
+    proj_folder = sprintf('./CASLProjects/project%s/__Output/', projects{i});
+    if exist(proj_folder, 'dir')
+        % Find a result file
+        files = dir(fullfile(proj_folder, '*.dat'));
+        if ~isempty(files)
+            capabilities_data{end+1} = {projects{i}, proj_folder, files(end).name};
         end
     end
-    
-    close(fig);
-    fprintf('   ✓ 3D surface GIF saved: %s\n', filename);
 end
 
-function create_contour_gif()
-    fig = figure('Position', [100 100 600 500], 'Color', 'w');
-    filename = 'lqr_contour.gif';
+if length(capabilities_data) >= 2
+    fig = figure('Position', [200 200 800 600], 'Color', 'white');
     
-    % Find color limits
-    c_max = 0;
-    for k = 1:length(times)
-        phi_temp = load_phi_data(k);
-        c_max = max(c_max, max(phi_temp(:)));
-    end
+    filename_cap = 'casl_capabilities.gif';
     
-    for k = 1:length(times)
-        t = times(k);
-        phi = load_phi_data(k);
-        
+    % Create capability showcase frames
+    for cap_idx = 1:length(capabilities_data)
         clf;
-        contourf(X, Y, phi, 20, 'LineColor', 'none');
-        colormap(parula);
         
-        title(sprintf('LQR Cost-to-Go Evolution: t = %.1f', t), ...
-              'FontSize', 16, 'FontWeight', 'bold');
-        xlabel('State x₁', 'FontSize', 12);
-        ylabel('State x₂', 'FontSize', 12);
+        proj_name = capabilities_data{cap_idx}{1};
+        proj_folder = capabilities_data{cap_idx}{2};
+        proj_file = capabilities_data{cap_idx}{3};
         
-        colorbar;
-        caxis([0 c_max]);
-        axis equal tight;
-        set(gca, 'FontSize', 11);
-        
-        drawnow;
-        frame = getframe(gcf);
-        [imind, cm] = rgb2ind(frame.cdata, 256);
-        
-        if k == 1
-            imwrite(imind, cm, filename, 'gif', 'Loopcount', inf, 'DelayTime', 0.6);
-        else
-            imwrite(imind, cm, filename, 'gif', 'WriteMode', 'append', 'DelayTime', 0.6);
-        end
-    end
-    
-    close(fig);
-    fprintf('   ✓ Contour GIF saved: %s\n', filename);
-end
-
-function create_comparison_gif()
-    fig = figure('Position', [100 100 1200 500], 'Color', 'w');
-    filename = 'lqr_validation.gif';
-    
-    % Analytical Riccati solution
-    A = [0 1; 0 0]; B = [0; 1]; Q = eye(2); R = 1;
-    eye_2 = eye(2); 
-    [t_ric, P_vec] = ode45(@(t,P) riccati_rhs(t,P,A,B,Q,R), [0 max(times)], eye_2(:));
-    
-    for k = 1:length(times)
-        t = times(k);
-        phi_num = load_phi_data(k);
-        
-        % Compute analytical solution
-        P_t = interp1(t_ric, P_vec, t, 'pchip');
-        P_mat = reshape(P_t, 2, 2);
-        phi_ana = zeros(gridSize, gridSize);
-        for i = 1:gridSize
-            for j = 1:gridSize
-                x_vec = [X(i,j); Y(i,j)];
-                phi_ana(i,j) = 0.5 * x_vec' * P_mat * x_vec;
+        % Load and display the data
+        try
+            full_path = fullfile(proj_folder, proj_file);
+            data = load(full_path);
+            
+            % Determine grid size
+            n_points = length(data);
+            n_side = round(sqrt(n_points));
+            
+            if n_side^2 == n_points
+                % 2D data
+                phi = reshape(data, n_side, n_side)';
+                [X_proj, Y_proj] = meshgrid(linspace(-4, 4, n_side));
+                
+                surf(X_proj, Y_proj, phi, 'EdgeColor', 'none');
+                view([45 30]); colormap(parula); shading interp;
+                
+                title(sprintf('CASL-HJX: %s Solver', proj_name), ...
+                      'FontSize', 16, 'FontWeight', 'bold');
+                xlabel('x'); ylabel('y'); zlabel('φ');
+                axis tight; grid off;
+                
+                % Add description
+                descriptions = containers.Map();
+                descriptions('Advection') = 'Linear transport equation';
+                descriptions('Burgers') = 'Nonlinear Burgers equation';
+                descriptions('AdvectionDiffusion') = 'Coupled transport-diffusion';
+                descriptions('Diffusion') = 'Heat/diffusion equation';
+                descriptions('LQR2D') = 'Optimal control (HJB equation)';
+                
+                if descriptions.isKey(proj_name)
+                    text(0.02, 0.98, descriptions(proj_name), ...
+                         'Units', 'normalized', 'FontSize', 12, ...
+                         'BackgroundColor', 'white', 'EdgeColor', 'black');
+                end
             end
+        catch
+            % Skip if data can't be loaded
+            continue;
         end
-        
-        clf;
-        
-        % Numerical (left)
-        subplot(1,3,1);
-        contourf(X, Y, phi_num, 20, 'LineColor', 'none');
-        title('Numerical Solution', 'FontSize', 12, 'FontWeight', 'bold');
-        colorbar; axis equal tight; colormap(parula);
-        
-        % Analytical (center)
-        subplot(1,3,2);
-        contourf(X, Y, phi_ana, 20, 'LineColor', 'none');
-        title('Analytical Solution', 'FontSize', 12, 'FontWeight', 'bold');
-        colorbar; axis equal tight; colormap(parula);
-        
-        % Error (right)
-        subplot(1,3,3);
-        error = abs(phi_num - phi_ana);
-        contourf(X, Y, error, 20, 'LineColor', 'none');
-        title('Absolute Error', 'FontSize', 12, 'FontWeight', 'bold');
-        colorbar; axis equal tight; colormap(hot);
-        
-        sgtitle(sprintf('CASL-HJX Validation: t = %.1f', t), ...
-                'FontSize', 16, 'FontWeight', 'bold');
         
         drawnow;
-        frame = getframe(gcf);
-        [imind, cm] = rgb2ind(frame.cdata, 256);
         
-        if k == 1
-            imwrite(imind, cm, filename, 'gif', 'Loopcount', inf, 'DelayTime', 1.0);
+        frame = getframe(fig);
+        im = frame2im(frame);
+        [imind, cm] = rgb2ind(im, 128);
+        
+        if cap_idx == 1
+            imwrite(imind, cm, filename_cap, 'gif', 'Loopcount', inf, 'DelayTime', 2.0);
         else
-            imwrite(imind, cm, filename, 'gif', 'WriteMode', 'append', 'DelayTime', 1.0);
+            imwrite(imind, cm, filename_cap, 'gif', 'WriteMode', 'append', 'DelayTime', 2.0);
         end
+        
+        fprintf('  ✓ Capability %d/%d (%s)\n', cap_idx, length(capabilities_data), proj_name);
     end
     
     close(fig);
-    fprintf('   ✓ Validation GIF saved: %s\n', filename);
+    fprintf('✅ Capabilities GIF: %s\n\n', filename_cap);
+else
+    fprintf('⚠️  Skipping capabilities GIF (need multiple solvers)\n\n');
 end
 
-function phi = load_phi_data(k)
-    fname = fullfile(folder, filenames{k});
-    phi = reshape(load(fname), gridSize, gridSize)';
+%% ========================================================================
+%% FILE SIZE CHECK AND SUMMARY
+%% ========================================================================
+
+fprintf('📁 Final file summary:\n');
+
+gif_files = {'lqr_solver_demo.gif', 'lqr_validation_compact.gif'};
+if exist('casl_capabilities.gif', 'file')
+    gif_files{end+1} = 'casl_capabilities.gif';
 end
 
+total_size = 0;
+for i = 1:length(gif_files)
+    if exist(gif_files{i}, 'file')
+        info = dir(gif_files{i});
+        size_mb = info.bytes / (1024^2);
+        total_size = total_size + size_mb;
+        
+        status = '✅';
+        note = '';
+        if size_mb > 3
+            status = '⚠️ ';
+            note = ' (large for GitHub)';
+        end
+        
+        fprintf('  %s %s: %.1f MB%s\n', status, gif_files{i}, size_mb, note);
+    end
+end
+
+fprintf('  📊 Total size: %.1f MB\n\n', total_size);
+
+% README template
+fprintf('🚀 Add to your README.md:\n\n');
+fprintf('```markdown\n');
+fprintf('## 🎬 Live Demonstrations\n\n');
+fprintf('### Hamilton-Jacobi-Bellman Solver in Action\n');
+fprintf('![LQR Solver Demo](lqr_solver_demo.gif)\n\n');
+fprintf('*Real-time solution of optimal control problem showing cost-to-go function V(x,t) evolution*\n\n');
+fprintf('### Numerical Validation\n');
+fprintf('![Validation](lqr_validation_compact.gif)\n\n');
+fprintf('*Comparison between numerical solution and analytical Riccati solution*\n\n');
+if exist('casl_capabilities.gif', 'file')
+    fprintf('### Multi-Solver Capabilities\n');
+    fprintf('![CASL Capabilities](casl_capabilities.gif)\n\n');
+    fprintf('*CASL-HJX framework solving multiple PDE types*\n\n');
+end
+fprintf('```\n');
+
+fprintf('🎉 GitHub-optimized GIFs ready for upload!\n');
+
+%% Helper function
 function dPdt = riccati_rhs(~, P, A, B, Q, R)
     Pm = reshape(P, 2, 2);
     dPdt = (A.' * Pm + Pm * A - Pm * B * (R \ B.') * Pm + Q);
     dPdt = dPdt(:);
+end
+
+function str = time_string(t)
+    if abs(t - round(t)) < 1e-10
+        str = sprintf('%d', round(t));
+    else
+        str = strrep(sprintf('%.1f', t), '.', 'p');
+    end
 end
