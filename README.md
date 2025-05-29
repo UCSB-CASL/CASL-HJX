@@ -20,7 +20,7 @@ The library supports various PDE types including advection, diffusion, Burgers e
 ## Example: LQR Optimal Control
 
 <p align="center">
-  <img src="CASLProjects/projectLQR2D/Results/lqr_hero_professional.gif" alt="LQR optimal control demonstration" width="1500"/>
+  <img src="CASLProjects/projectLQR2D/Results/lqr_hero_professional.gif" alt="LQR optimal control demonstration" width="700"/>
 </p>
 
 ## Installation
@@ -49,8 +49,7 @@ cd ../projectBurgers && ./projectBurgers
 
 ## Documentation
 
-- User manual: `docs/UserManual.pdf`
-- API reference: [https://casl-hjx.readthedocs.io](https://casl-hjx.readthedocs.io)
+- User Manual Paper: [https://arxiv.org/abs/2505.11527](https://arxiv.org/abs/2505.11527)
 - Examples: `examples/` directory
 
 ## Authors
