@@ -20,16 +20,15 @@ The library supports various PDE types including advection, diffusion, Burgers e
 ## Example: LQR Optimal Control
 
 <p align="center">
-  <img src="CASLProjects/projectLQR2D/Results/lqr_hero_professional.gif" alt="LQR optimal control demonstration" width="700"/>
+  <img src="CASLProjects/projectLQR2D/Results/lqr_hero_professional.gif" alt="LQR optimal control demonstration" width="1000"/>
 </p>
 
 ## Example: Advection in Normal Direction
 
 <p align="center">
-  <img src="CASLProjects/projectNormalAdvection/PostProcessing/normal_advection_evolution.gif" alt="Normal advection level set evolution" width="700"/>
+  <img src="CASLProjects/projectNormalAdvection/PostProcessing/normal_advection_evolution.gif" alt="Normal advection level set evolution" width="1000"/>
 </p>
 
-*Evolution of the zero level set for the normal advection equation ∂φ/∂t + vₙ|∇φ| = 0 using WENO5 spatial discretization and TVD-RK3 time integration.*
 
 ## Installation
 
