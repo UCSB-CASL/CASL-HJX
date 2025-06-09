@@ -42,16 +42,16 @@ endif()
 
 # Create the common library
 add_library(CASLCommonLibrary
-        CASLCommonLibrary/CASLArray2D.cpp
+        CASLCommonLibrary/CaslArray2D.cpp
         CASLCommonLibrary/CaslGrid2D.h
         CASLCommonLibrary/CaslOptions.h
-        CASLCommonLibrary/CASLCppToMatlab2D.cpp
-        CASLCommonLibrary/CASLHamiltonian2D.cpp
-        CASLCommonLibrary/CASLHamiltonJacobi.cpp
-        CASLCommonLibrary/CASLHamiltonJacobi2D.cpp
+        CASLCommonLibrary/CaslCppToMATLAB2D.cpp
         CASLCommonLibrary/CaslHamiltonian2D.cpp
-        CASLCommonLibrary/CASLRK4.cpp
-        CASLCommonLibrary/CASLSecondOrderDerivative2D_1D.cpp
+        CASLCommonLibrary/CaslHamiltonJacobi.cpp
+        CASLCommonLibrary/CaslHamiltonJacobi2D.cpp
+        CASLCommonLibrary/CaslHamiltonian2D.cpp
+        CASLCommonLibrary/CaslRK4.cpp
+        CASLCommonLibrary/CaslSecondOrderDerivative2D_1D.cpp
         CASLCommonLibrary/DPMatrix2D.cpp
 )
 
