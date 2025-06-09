@@ -3,6 +3,7 @@
 //
 
 #include "CaslHamiltonianDiffusion2D.h"
+#include <cmath>
 
 CaslHamiltonianDiffusion2D::CaslHamiltonianDiffusion2D(CaslGrid2D& grid, CaslArray2D<double> & c1, CaslArray2D<double> & c2) :
         _c1(c1), _c2(c2), CaslHamiltonian2D(grid) {}
