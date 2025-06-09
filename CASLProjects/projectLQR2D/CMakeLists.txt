@@ -129,8 +129,8 @@ endif()
 
 # Create library target for LQR-specific code
 add_library(${PROJECT_NAME}_lib
-        projectLQR2D_lib/CASLHamiltonianLQR2D.cpp
-        projectLQR2D_lib/CASLLQRSystemDynamics.cpp
+        projectLQR2D_lib/CaslHamiltonianLQR2D.cpp
+        projectLQR2D_lib/CaslLQRSystemDynamics.cpp
 )
 
 # Apply optimizations to library as well
