@@ -8,6 +8,7 @@ template class DPMatrixPeriodic2D<double>;
 template class DPMatrixPeriodic2D<float>;
 template class DPMatrixExtended2D<double, DPMatrix2D<double>>;
 
+int mod(int x, int m) {return (x % m + m) % m;}
 
 /// Checks to make sure CASL grid has pads
 template<class T>
