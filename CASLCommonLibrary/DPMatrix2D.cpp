@@ -6,7 +6,6 @@ template class PeriodicSolver<double>;
 template class PeriodicSolver<float>;
 template class DPMatrixPeriodic2D<double>;
 template class DPMatrixPeriodic2D<float>;
-template class DPMatrixExtended2D<double, DPMatrix2D<double>>;
 
 int mod(int x, int m) {return (x % m + m) % m;}
 
