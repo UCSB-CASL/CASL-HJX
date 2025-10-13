@@ -6,10 +6,8 @@
 #include <cmath>
 #include <complex>
 
-
+#define eps 1e-14
 using namespace std;
-
-
 
 /// Implementation of efficient representation of discrete Poisson equation matrix (2d)
 template<class T> class DPMatrix2D {
@@ -220,30 +218,5 @@ public:
     void uSolve(CaslArray2D<T>& x0, const CaslArray2D<T> &b);
 };
 
-template<typename T, class Matrix> class DPMatrixExtended2D: public Matrix {
-protected:
-    using Matrix::_data, Matrix::nX, Matrix::nY, Matrix::_n, Matrix::dot, Matrix::luSolve;
-    vector<vector<T>> _extend;          // Extends grid as [-2x +2x -2y +2y]
-    CaslArray2D<T>* preconditioner;     // Row norms of original matrix
-public:
-    DPMatrixExtended2D(int nX, int nY);
-    explicit DPMatrixExtended2D(int m) : DPMatrixExtended2D(m, m) {};
-    ~DPMatrixExtended2D() {delete preconditioner;}
-
-    /// Fill matrix with a quadratic boundary condition
-    /// @param diag value of diagonals of matrix
-    /// @param offX value of off diagonals associated with x-adjacent cells
-    /// @param offY value of off diagonals associated with y-adjacent cells
-    void quadraticBoundary(T diag, T offX, T offY);
-
-
-    // Left-hand side matrix multiplication extended a grid square
-    /// @param x applies matrix to x vector
-    /// @param Ax where to place the resulting grid (overwrites old values)
-    void matMult(CaslArray2D<T>& x, CaslArray2D<T>& Ax);
-
-    void conjGradQUAD(CaslArray2D<T>& x0, const CaslArray2D<T> &b, T tol, int niter);
-    void biconjGradQUAD(CaslArray2D<T>& x0, const CaslArray2D<T> &b, DPMatrix2D<T>& L, DPMatrix2D<T>& U, T tol, int niter);
-};
 
 #endif //CASLUNIFORM_SESOLVER_H

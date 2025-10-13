@@ -318,7 +318,7 @@ void CaslSecondOrderDerivative2D<T>::crankNicolson(CaslArray2D<double>& un, Casl
                     // Change the whole RHS(i, j) with the function formula
                     RHS(i, j) = un(i, j);
                     // Add explicit u_yy term
-                    RHS(i, j) += _dt * _diffusionCoefficient * (un(i-1,j) - 2*un(i,j)) + un(i+1,j) / pow(_grid.dx(),-2);
+                    RHS(i, j) += _dt * _diffusionCoefficient * (un(i-1,j) - 2*un(i,j) + un(i+1,j)) / (_grid.dx() * _grid.dx());
 
                     // Add numerical hamiltonian
                     // Compute the numerical Hamiltonian at time step: n, solving explicitly
@@ -382,7 +382,7 @@ void CaslSecondOrderDerivative2D<T>::crankNicolson(CaslArray2D<double>& un, Casl
                     // Change the whole RHS(i, j) with the function formula
                     RHS(i, j) = un(i, j);
                     // Add explicit u_yy term
-                    RHS(i, j) += _dt * _diffusionCoefficient * (un(i,j-1) - 2*un(i,j)) + un(i,j+1) / pow(_grid.dy(),-2);
+                    RHS(i, j) += _dt * _diffusionCoefficient * (un(i,j-1) - 2*un(i,j) + un(i,j+1)) / (_grid.dy() * _grid.dy());
 
                     // Add numerical hamiltonian
                     // Compute the numerical Hamiltonian at time step: n, solving explicitly
@@ -527,7 +527,7 @@ template<class T>
 void CaslSecondOrderDerivative2D<T>::computeDxxForwardTimeCentralSpacing(const CaslArray2D<double> &un, CaslArray2D<double>& Dxx) {
     T dx = _grid.dx(); int nX = _grid.nX(), nY = _grid.nY();
     for (int i = 1; i <= nX; ++i) for (int j = 1; j <= nY; ++j) {
-            Dxx(i, j) = ( un(i,j) - 2 * un(i, j) + un(i-1,j) ) / (pow(dx, 2));
+            Dxx(i, j) = ( un(i+1,j) - 2 * un(i, j) + un(i-1,j) ) / (pow(dx, 2));
         }
 }
 
@@ -545,7 +545,7 @@ void CaslSecondOrderDerivative2D<T>::computeDxxBackwardTimeCentralSpacing(const 
 
 template<class T>
 void CaslSecondOrderDerivative2D<T>::computeDxxCrankNicolson(const CaslArray2D<double> &un, CaslArray2D<double> &Dxx) {
-
+    std::cout << "In CaslSecondOrderDerivative2D::computeDxxCrankNicolson, the solver does not exists. EXITING." << std::endl; exit(1);
 }
 
 template<class T>
@@ -561,7 +561,7 @@ template<class T>
 void CaslSecondOrderDerivative2D<T>::computeDyyForwardTimeCentralSpacing(const CaslArray2D<double>& un, CaslArray2D<double>& Dyy){
     T dy = _grid.dy(); int nX = _grid.nX(), nY = _grid.nY();
     for (int i = 1; i <= nX; ++i) for (int j = 1; j <= nY; ++j) {
-            Dyy(i, j) = ( un(i,j) - 2 * un(i, j) + un(i-1,j) ) / (pow(dy, 2));
+            Dyy(i, j) = ( un(i,j+1) - 2 * un(i, j) + un(i,j-1) ) / (pow(dy, 2));
         }
 }
 
@@ -579,7 +579,7 @@ void CaslSecondOrderDerivative2D<T>::computeDyyBackwardTimeCentralSpacing(const 
 
 template<class T>
 void CaslSecondOrderDerivative2D<T>::computeDyyCrankNicolson(const CaslArray2D<double>& un, CaslArray2D<double>& Dyy){
-
+    std::cout << "In CaslSecondOrderDerivative2D::computeDyyCrankNicolson, the solver does not exists. EXITING." << std::endl; exit(1);
 }
 
 template<class T>
@@ -606,12 +606,12 @@ void CaslSecondOrderDerivative2D<T>::computeDxyForwardTimeCentralSpacing(const C
 
 template<class T>
 void CaslSecondOrderDerivative2D<T>::computeDxyBackwardTimeCentralSpacing(const CaslArray2D<double>& un, CaslArray2D<double>& Dxy){
-
+    std::cout << "In CaslSecondOrderDerivative2D::computeDxyBackwardTimeCentralSpacing, the solver does not exists. EXITING." << std::endl; exit(1);
 }
 
 template<class T>
 void CaslSecondOrderDerivative2D<T>::computeDxyCrankNicolson(const CaslArray2D<double>& un, CaslArray2D<double>& Dxy){
-
+    std::cout << "In CaslSecondOrderDerivative2D::computeDxyCrankNicolson, the solver does not exists. EXITING." << std::endl; exit(1);
 }
 
 template<class T>
@@ -639,12 +639,12 @@ void CaslSecondOrderDerivative2D<T>::computeDyxForwardTimeCentralSpacing(const C
 
 template<class T>
 void CaslSecondOrderDerivative2D<T>::computeDyxBackwardTimeCentralSpacing(const CaslArray2D<double>& un, CaslArray2D<double>& Dyx) {
-
+    std::cout << "In CaslSecondOrderDerivative2D::computeDyxBackwardTimeCentralSpacing, the solver does not exists. EXITING." << std::endl; exit(1);
 }
 
 template<class T>
 void CaslSecondOrderDerivative2D<T>::computeDyxCrankNicolson(const CaslArray2D<double>& un, CaslArray2D<double>& Dyx) {
-
+    std::cout << "In CaslSecondOrderDerivative2D::computeDyxCrankNicolson, the solver does not exists. EXITING." << std::endl; exit(1);
 }
 
 /* Helper private member functions */

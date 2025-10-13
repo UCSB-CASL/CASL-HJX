@@ -8,7 +8,6 @@ template class DPMatrixPeriodic2D<double>;
 template class DPMatrixPeriodic2D<float>;
 template class DPMatrixExtended2D<double, DPMatrix2D<double>>;
 
-int mod(int x, int m) {return (x % m + m) % m;}
 
 /// Checks to make sure CASL grid has pads
 template<class T>
@@ -27,39 +26,6 @@ T DPMatrix2D<T>::dot(const CaslArray2D<T>& u, const CaslArray2D<T>& v){
         output += u(i, j) * v(i, j);
     return output;
 }
-
-//template<class T>
-//vector<complex<T>> DPMatrix2D<T>::fft(const vector<complex<T>>& x, bool inverse){
-//    _n = x.size();
-//
-//    vector<complex<T>> a(_n);
-//    vector<complex<T>> b(_n);
-//
-//    for(int n = 0; n < _n; ++n) {
-//        complex<T> temp = exp(complex<T>(0, (n*n) * -M_PI / _n));
-//        if (inverse) temp = conj(temp);
-//
-//        a[n] = x[n] * temp;
-//        b[n] = conj(temp);
-//    }
-//
-//    vector<complex<T>> ainv = fftPadded(a);
-//    vector<complex<T>> output = fftPadded(b);
-//
-//    for (int n = 0; n < ainv.size(); ++n)
-//        output[n] = ainv[n] * output[n];
-//
-//    output = fftPadded(output, true);
-//    output.resize(_n);
-//
-//    for (int n = 0; n < _n; ++n)
-//        output[n] = conj(b[n]) * output[n];
-//
-//    if (inverse)
-//        for (int n = 0; n < _n; ++n) output[n] /= complex<T>(_n);
-//
-//    return output;
-//}
 
 /*
  * Matrix Implementation
@@ -293,14 +259,14 @@ void DPMatrix2D<T>::ILU(DPMatrix2D<T>& L, DPMatrix2D<T>& U) {
         if (i > 1) {
             kx = id - 1;                                    // -x adjacent index
             U.data(kx, 3) = _data[kx][3];                   // U_ij = a_ij
-            L.data(id, 1) = _data[id][1] / (U.data(kx, 2) ? U.data(kx, 2) : 1);     // L_ik = a_ik / u_kk
+            L.data(id, 1) = _data[id][1] / (U.data(kx, 2) + eps);     // L_ik = a_ik / u_kk
             U.data(id, 2) -= L.data(id, 1) * _data[kx][3];    // U_ii = a_ii - l_ik*u_ki - ...
         }
 
         if (j > 1) {
             ky = id - nX;                                   // -y adjacent index
             U.data(ky, 4) = _data[ky][4];                   // U_ij = a_ij
-            L.data(id, 0) = _data[id][0] / (U.data(ky, 2) ? U.data(ky, 2) : 1);     // L_ik = a_ik / u_kk
+            L.data(id, 0) = _data[id][0] / (U.data(ky, 2) + eps);     // L_ik = a_ik / u_kk
             U.data(id, 2) -= L.data(id, 0) * _data[ky][4];    // U_ii = a_ii - l_ik*u_ki - ...
         }
 
@@ -356,7 +322,7 @@ void DPMatrix2D<T>::gaussSeidel(CaslArray2D<T>& x0, const CaslArray2D<T> &b, int
                         x0(i, j) -= (*this)(I, J) * x0(k, l) * (I != J);
                     }
 
-                x0(i, j) /= _data[i][2];
+                x0(i, j) /= _data[I][2];
             }
 
     }
@@ -945,308 +911,3 @@ void DPMatrixPeriodic2D<T>::uSolve(CaslArray2D<T>& x0, const CaslArray2D<T> &b){
                    - x0(nX, 1) * _data[id][1] - x0(2, 1) * _data[id][3]) / _data[id][2];
 }
 
-
-/// Extended
-
-template<typename T, class Matrix>
-DPMatrixExtended2D<T, Matrix>::DPMatrixExtended2D(int nX, int nY): Matrix(nX, nY) {
-    _extend = vector<vector<T>>(_n);
-    for (int i = 0; i < _n; ++i) _extend[i] = vector<T>(4);
-    preconditioner = new CaslArray2D<T>(nX, nY);
-}
-
-template<typename T, class Matrix>
-void DPMatrixExtended2D<T, Matrix>::quadraticBoundary(T diag, T offX, T offY) {
-    // Quadratic boundary condition
-
-    const T offX2 = offX + offX; const T offX3 = offX2 + offX;
-    const T offY2 = offY + offY; const T offY3 = offY2 + offY;
-
-    int id = 0;
-    for (int j = 1; j <= nY; ++j) for (int i = 1; i <= nX; ++i) {
-            bool edgeX = true, edgeY = true;
-
-            _data[id][2] = diag;
-
-            // Determine whether X boundary
-            // Left X
-            if      (i == 1 ) {_data[id][1] = 0;      _data[id][3] = -offX2;
-                               _data[id][2] += offX3; _extend[id][1] = offX;}
-            // Right X
-            else if (i == nX) {_data[id][1] = -offX2; _data[id][3] = 0;
-                               _data[id][2] += offX3; _extend[id][0] = offX;}
-            // Inner
-            else              {_data[id][1] = offX;  _data[id][3] = offX; edgeX = false;}
-
-
-            // Determine whether Y boundary
-            // Left Y
-            if      (j == 1 ) {_data[id][0] = 0;      _data[id][4] = -offY2;
-                               _data[id][2] += offY3; _extend[id][3] = offY;}
-            // Right Y
-            else if (j == nY) {_data[id][0] = -offY2; _data[id][4] = 0;
-                               _data[id][2] += offY3; _extend[id][2] = offY;}
-            // Inner
-            else              {_data[id][0] = offY;  _data[id][4] = offY; edgeY = false;}
-
-
-            // Corner handle
-            if (edgeX && edgeY) {
-                for (int I = 0; I < 5; ++I) _data[id][I] = 0;
-                for (int I = 0; I < 4; ++I) _extend[id][I] = 0;
-                _data[id][2] = 1;
-            }
-
-            id += 1;
-        }
-}
-
-
-template<typename T, class Matrix>
-void DPMatrixExtended2D<T, Matrix>::matMult(CaslArray2D<T>& x, CaslArray2D<T>& Ax) {
-    Matrix::matMult(x, Ax);
-
-    int id2 = 0;
-    int id = nX;
-
-    // Top Left Corners
-    Ax(1, 1) += _extend[id2][0] * x(nX-1, 1   ) + _extend[id2][1] * x(3, 1)
-              + _extend[id2][2] * x(1   , nY-1) + _extend[id2][3] * x(1, 3);
-    id2++;
-    Ax(2, 1) += _extend[id2][0] * x(nX, 1   ) + _extend[id2][1] * x(4, 1)
-              + _extend[id2][2] * x(2 , nY-1) + _extend[id2][3] * x(2, 3);
-    id2++;
-
-    Ax(1, 2) += _extend[id][0] * x(nX-1, 2 ) + _extend[id][1] * x(3, 2)
-              + _extend[id][2] * x(1   , nY) + _extend[id][3] * x(1, 4);
-    id++;
-    Ax(2, 2) += _extend[id][0] * x(nX, 2 ) + _extend[id][1] * x(4, 2)
-              + _extend[id][2] * x(2 , nY) + _extend[id][3] * x(2, 4);
-    id++;
-
-
-    // Top Rows
-    for (int i = 3; i <= nX-2; ++i){
-        Ax(i, 1) += _extend[id2][0] * x(i-2, 1   ) + _extend[id2][1] * x(i+2, 1)
-                  + _extend[id2][2] * x(i  , nY-1) + _extend[id2][3] * x(i  , 3);
-        id2++;
-        Ax(i, 2) += _extend[id][0] * x(i-2, 2 ) + _extend[id][1] * x(i+2, 2)
-                  + _extend[id][2] * x(i  , nY) + _extend[id][3] * x(i  , 4);
-        id++;
-    }
-
-    // Top Right Corners
-    Ax(nX-1, 1) += _extend[id2][0] * x(nX-3, 1   ) + _extend[id2][1] * x(1   , 1)
-                 + _extend[id2][2] * x(nX-1, nY-1) + _extend[id2][3] * x(nX-1, 3);
-    id2++;
-    Ax(nX, 1) += _extend[id2][0] * x(nX-2, 1   ) + _extend[id2][1] * x(2 , 1)
-               + _extend[id2][2] * x(nX  , nY-1) + _extend[id2][3] * x(nX, 3);
-
-    Ax(nX-1, 2) += _extend[id][0] * x(nX-3, 2 ) + _extend[id][1] * x(1   , 2)
-                 + _extend[id][2] * x(nX-1, nY) + _extend[id][3] * x(nX-1, 4);
-    id++;
-    Ax(nX  , 2) += _extend[id][0] * x(nX-2, 2 ) + _extend[id][1] * x(2 , 2)
-                 + _extend[id][2] * x(nX  , nY) + _extend[id][3] * x(nX, 4);
-    id++;
-
-    for (int j = 3; j <= nY - 2; ++j) {
-        // Left Boundary
-        Ax(1, j) += _extend[id][0] * x(nX-1, j  ) + _extend[id][1] * x(3, j  )
-                  + _extend[id][2] * x(1   , j-2) + _extend[id][3] * x(1, j+2);
-        id++;
-        Ax(2, j) += _extend[id][0] * x(nX  , j  ) + _extend[id][1] * x(4, j  )
-                  + _extend[id][2] * x(2   , j-2) + _extend[id][3] * x(2, j+2);
-        id++;
-
-        // Inner
-        for (int i = 3; i <= nX - 2; ++i) {
-            Ax(i, j) += _extend[id][0] * x(i-2, j  ) + _extend[id][1] * x(i+2, j  )
-                      + _extend[id][2] * x(i  , j-2) + _extend[id][3] * x(i  , j+2);
-            id++;
-        }
-
-        // Right Boundary
-        Ax(nX-1, j) += _extend[id][0] * x(nX-3, j  ) + _extend[id][1] * x(1   , j  )
-                     + _extend[id][2] * x(nX-1, j-2) + _extend[id][3] * x(nX-1, j+2);
-        id++;
-        Ax(nX  , j) += _extend[id][0] * x(nX-2, j  ) + _extend[id][1] * x(2 , j  )
-                     + _extend[id][2] * x(nX  , j-2) + _extend[id][3] * x(nX, j+2);
-        id++;
-
-    }
-
-    // Bottom Left Corners
-    id2 = id + nX;
-
-    Ax(1, nY-1) += _extend[id][0] * x(nX-1, nY-1) + _extend[id][1] * x(3, nY-1)
-                 + _extend[id][2] * x(1   , nY-3) + _extend[id][3] * x(1, 1    );
-    id++;
-    Ax(2, nY-1) += _extend[id][0] * x(nX, nY-1) + _extend[id][1] * x(4, nY-1)
-                 + _extend[id][2] * x(1 , nY-3) + _extend[id][3] * x(2, 1    );
-    id++;
-
-    Ax(1, nY  ) += _extend[id2][0] * x(nX-1, nY  ) + _extend[id2][1] * x(3, nY)
-                 + _extend[id2][2] * x(1   , nY-2) + _extend[id2][3] * x(1, 2 );
-    id2++;
-    Ax(2, nY  ) += _extend[id2][0] * x(nX, nY  ) + _extend[id2][1] * x(4, nY)
-                 + _extend[id2][2] * x(2 , nY-2) + _extend[id2][3] * x(2, 2 );
-    id2++;
-
-    // Bottom Rows
-    for (int i = 3; i <= nX-2; ++i){
-        Ax(i, nY-1) += _extend[id][0] * x(i-2, nY-1) + _extend[id][1] * x(i+2, nY-1)
-                     + _extend[id][2] * x(i  , nY-3) + _extend[id][3] * x(i  , 1    );
-        id++;
-        Ax(i, nY  ) += _extend[id2][0] * x(i-2, nY  ) + _extend[id2][1] * x(i+2, nY)
-                     + _extend[id2][2] * x(i  , nY-2) + _extend[id2][3] * x(i  , 2 );
-        id2++;
-    }
-
-
-    // Bottom Right Corners
-    Ax(nX-1, nY-1) += _extend[id][0] * x(nX-3, nY-1) + _extend[id][1] * x(1   , nY-1)
-                    + _extend[id][2] * x(nX-1, nY-3) + _extend[id][3] * x(nX-1, 1    );
-    id++;
-    Ax(nX  , nY-1) += _extend[id][0] * x(nX-2, nY-1) + _extend[id][1] * x(2 , nY-1)
-                    + _extend[id][2] * x(nX  , nY-3) + _extend[id][3] * x(nX, 1    );
-
-    Ax(nX-1, nY  ) += _extend[id2][0] * x(nX-3, nY  ) + _extend[id2][1] * x(1   , nY)
-                    + _extend[id2][2] * x(nX-1, nY-2) + _extend[id2][3] * x(nX-1, 2 );
-    id2++;
-    Ax(nX  , nY  ) += _extend[id2][0] * x(nX-2, nY  ) + _extend[id2][1] * x(2 , nY)
-                    + _extend[id2][2] * x(nX  , nY-2) + _extend[id2][3] * x(nX, 2 );
-
-
-}
-
-template<typename T, class Matrix>
-void DPMatrixExtended2D<T, Matrix>::conjGradQUAD(CaslArray2D<T>& x0, const CaslArray2D<T> &b, T tol, int niter){
-    // Null space vectors preprocess
-    CaslArray2D<T> xNull(nX, nY), yNull(nX, nY), xyNull(nX, nY), x2y2Null(nX, nY);
-    T xNorm = nX * (nX*nX - 1) / 12.0;
-    T yNorm = nY * (nY*nY - 1) / 12.0;
-    T xyNorm = xNorm * yNorm;
-    xNorm *= nY; yNorm *= nX;
-    T x2y2Norm = (0.15*nX*nX - 0.35)*(xNorm + yNorm) - 2*xyNorm;
-
-    T xAvg = 0.5*(nX + 1), yAvg = 0.5*(nY + 1);
-    for (int i = 1; i <= nX; ++i) for (int j = 1; j <= nY; ++j) {
-        T I = i - xAvg, J = j - yAvg;
-        xNull(i, j)    = I           / sqrt(xNorm);
-        yNull(i, j)    = J           / sqrt(yNorm);
-        xyNull(i, j)   = I*J         / sqrt(xyNorm);
-        x2y2Null(i, j) = (I+J)*(I-J) / sqrt(x2y2Norm);
-
-    }
-
-    // Variable initialization
-    tol = tol*tol;
-    T a, B;
-    CaslArray2D<T> p(nX, nY, 1, 1), Ap(nX, nY);
-
-    CaslArray2D<T> r(nX, nY);
-    matMult(x0, r);
-    for (int i = 1; i <= nX; ++i) for (int j = 1; j <= nY; ++j){
-        r(i, j) = b(i, j) - r(i, j);
-        p(i, j) = r(i, j);
-    }
-
-    T rTr = dot(r,r);
-    // Main loop
-    for(int k = 0; k < niter; ++k){
-        matMult(p, Ap);
-
-        a = rTr / dot(p, Ap);
-        T sum = 0;
-        for (int i = 1; i <= nX; ++i) for (int j = 1; j <= nY; ++j) {
-            x0(i, j) += a * p(i, j);
-            r(i, j)  -= a * Ap(i, j);
-
-            sum += x0(i, j);
-        }
-        T average = sum / _n;
-        T xProj = dot(x0, xNull);
-        T yProj = dot(x0, yNull);
-        T xyProj = dot(x0, xyNull);
-        T x2y2Proj = dot(x0, x2y2Null);
-        for (int i = 1; i <= nX; ++i) for (int j = 1; j <= nY; ++j) {
-            x0(i, j) -= average;
-            x0(i, j) -= xProj * xNull(i, j);
-            x0(i, j) -= yProj * yNull(i, j);
-            x0(i, j) -= xyProj * xyNull(i, j);
-            x0(i, j) -= x2y2Proj * x2y2Null(i, j);
-        }
-        rTr = dot(r,r);
-
-        cout << rTr << ", ";
-        if (rTr < tol) break;
-
-        B = -(dot(r, Ap) / dot(p, Ap));
-        for (int i = 1; i <= nX; ++i) for (int j = 1; j <= nY; ++j)
-            p(i, j) = r(i, j) + B * p(i, j);
-    }
-}
-
-template<typename T, class Matrix>
-void DPMatrixExtended2D<T, Matrix>::biconjGradQUAD(CaslArray2D<T>& x0, const CaslArray2D<T>& b, DPMatrix2D<T>& L, DPMatrix2D<T>& U, T tol, int niter) {
-    // Variable initialization
-    tol = tol * tol;
-
-    CaslArray2D<T> p(nX, nY, 1, 1), r(nX, nY, 1, 1), y(nX, nY, 1, 1), Ks(nX, nY, 1, 1), Kt(nX, nY, 1, 1);
-    CaslArray2D<T> rHat(nX, nY), v(nX, nY, 1, 1), t(nX, nY, 1, 1);
-
-    matMult(x0, r);
-    for (int i = 1; i <= nX; ++i) for (int j = 1; j <= nY; ++j) {
-        r(i, j) = b(i, j) - r(i, j);
-        rHat(i, j) = r(i, j); // Initialize rHat as r
-        p(i, j) = r(i, j);
-    }
-
-    T rho = dot(rHat, r);
-
-    // Main loop
-    for (int k = 0; k < niter; ++k) {
-        luSolve(y, p, L, U, v);
-        matMult(y, v);
-
-        T alpha = rho / dot(rHat, v);
-
-        // Update x0
-        for (int i = 1; i <= nX; ++i) for (int j = 1; j <= nY; ++j) {
-            x0(i, j) += alpha * p(i, j);
-            r(i, j) -= alpha * v(i, j);
-        }
-
-        T rTr = dot(r, r);
-
-        cout << rTr << "(1), ";
-        // Check for convergence
-        if (rTr < tol) break;
-
-        // Compute omega
-        luSolve(y, r, L, U, t);
-        matMult(y, t);
-
-        L.lSolve(Ks, r);
-        L.lSolve(Kt, t);
-        T omega = dot(Kt, Ks) / dot(Kt, Kt);
-
-        // Update r and x
-        for (int i = 1; i <= nX; ++i) for (int j = 1; j <= nY; ++j) {
-            x0(i, j) += omega * y(i, j);
-            r(i, j) -= omega * t(i, j);
-        }
-
-        rTr = dot(r, r);
-        cout << rTr << "(2), ";
-        if (rTr < tol) break;
-
-        // Compute beta
-        T rho2 = dot(rHat, r);
-        T beta = (rho2 / rho) * (alpha / omega) ;
-        rho = rho2;
-        for (int i = 1; i <= nX; ++i) for (int j = 1; j <= nY; ++j) {
-            p(i, j) = r(i, j) + beta*(p(i, j) - omega*v(i, j));
-        }
-    }
-}
