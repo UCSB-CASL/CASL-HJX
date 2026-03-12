@@ -7,54 +7,77 @@
  * in the absence of noise, coupling and control
  */
 
-// Defined Constants
 #include "CaslHHSingleNeuronModel.h"
 #include <cmath>
+#include <limits>
 
-double m_inf(double v)
-{
-    return am(v) / (am(v) + bm(v));
+namespace {
+    constexpr double EPS_HH = 1e-12;
 }
 
 double am(double v)
 {
+    // Removable singularity at v = -40:
+    // lim_{v->-40} 0.1(v+40)/(1-exp(-(v+40)/10)) = 1
+    if (std::fabs(v + 40.0) < EPS_HH) return 1.0;
+
     double nom = 0.1 * (v + 40.0);
-    double denom = 1.0 - exp(-(v + 40.0) / 10.0);
+    double denom = 1.0 - std::exp(-(v + 40.0) / 10.0);
     return nom / denom;
 }
 
 double bm(double v)
 {
-    return 4.0 * exp(-(v + 65.0) / 18.0);
+    return 4.0 * std::exp(-(v + 65.0) / 18.0);
 }
 
 double an(double v)
 {
+    // Removable singularity at v = -55:
+    // lim_{v->-55} 0.01(v+55)/(1-exp(-(v+55)/10)) = 0.1
+    if (std::fabs(v + 55.0) < EPS_HH) return 0.1;
+
     double nom = 0.01 * (v + 55.0);
-    double denom = 1.0 - exp(-(v + 55.0) / 10.0);
+    double denom = 1.0 - std::exp(-(v + 55.0) / 10.0);
     return nom / denom;
 }
 
 double bn(double v)
 {
-    return 0.125 * exp(-(v + 65.0) / 80.0);
+    return 0.125 * std::exp(-(v + 65.0) / 80.0);
+}
+
+double m_inf(double v)
+{
+    const double a = am(v);
+    const double b = bm(v);
+    const double denom = a + b;
+
+    if (!std::isfinite(a) || !std::isfinite(b) || !std::isfinite(denom) || std::fabs(denom) < EPS_HH) {
+        return std::numeric_limits<double>::quiet_NaN();
+    }
+    return a / denom;
 }
 
 double fv(double v, double n)
 {
     /*
-     * dv/dt as a state dynamics for a single neuron without noise, coupling and strength
-     * The input is a scalar v (NOT a vector for the population of neurons, ith neuron of N neurons)
+     * dv/dt as a state dynamics for a single neuron without noise, coupling and control
      */
-    double nom = Ib - gna * pow(m_inf(v), 3) * (0.8 - n) * (v - Vna) - gk * pow(n, 4) * (v - Vk) - gl * (v - Vl);
-    double den = c;
-    return nom / den;
+    const double minf = m_inf(v);
+    const double nom =
+        Ib
+        - gna * std::pow(minf, 3) * (0.8 - n) * (v - Vna)
+        - gk  * std::pow(n, 4)    * (v - Vk)
+        - gl  * (v - Vl);
+
+    return nom / c;
 }
 
-double fn(double v, double n) {
+double fn(double v, double n)
+{
     /*
      * dn/dt as a state dynamics for a single neuron without noise, coupling and control
-     * The input is a scalar n (NOT a vector for the population of neurons, ith neuron of N neurons)
      */
     return an(v) * (1.0 - n) - bn(v) * n;
 }
@@ -69,21 +92,22 @@ double ndotsn(double v, double n)
     return fn(v, n);
 }
 
-// HH model as a system of two odes
+// HH model as a system of two ODEs
 void hhs(double t, double v, double n, std::vector<double>& dydt)
 {
+    (void)t;
     dydt[0] = vdotsn(v, n);
     dydt[1] = ndotsn(v, n);
 }
 
-void zdyn(double x, double y, double u, double& fvControl, double& fnControl){
+void zdyn(double x, double y, double u, double& fvControl, double& fnControl)
+{
     /*
      * State dynamics for a single neuron with control but without noise and coupling
-     * The inputs are scalar(NOT a vector for the population of neurons, ith neuron of N neurons)
-     * u should be the output of Bi-linear interpolation function when U as a CaslArray2D passed to it on the grid
      */
     double v = Ks * x;
     double n = y;
-    fvControl = (1.0/Ks) * fv(v, n) + (1.0 / Ks) * u;
-    fnControl = fn(n, v);
+
+    fvControl = (1.0 / Ks) * fv(v, n) + (1.0 / Ks) * u;
+    fnControl = fn(v, n);   // FIXED: was fn(n, v)
 }
